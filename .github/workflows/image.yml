@@ -56,7 +56,7 @@ jobs:
           build-args: |
             ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
           labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}/${{ matrix.image.program_name }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}/tree/main/${{ matrix.image.program_name }}
             org.opencontainers.image.revision=${{ github.sha }}
           platforms: linux/amd64,linux/arm64, linux/arm/v7
           tags: |
