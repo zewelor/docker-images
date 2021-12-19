@@ -1,9 +1,11 @@
-ARG ALPINE_VERSION=3.12
+ARG ALPINE_VERSION=3
 FROM alpine:${ALPINE_VERSION}
 
 RUN apk add --no-cache dhcp
 
 EXPOSE 67/udp 67/tcp
+
+VOLUME /etc/dhcp/dhcpd.conf
 
 RUN ["touch", "/var/lib/dhcp/dhcpd.leases"]
 

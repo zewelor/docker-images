@@ -18,6 +18,7 @@ jobs:
         image:
           - program_name: "dhcpd"
           - program_name: "tftp"
+          - program_name: "sqlite3"
     steps:
       - name: Set the PREVIOUS_STABLE_ALPINE env
         id: alpine_version_checker
