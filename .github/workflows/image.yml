@@ -1,0 +1,62 @@
+name: Build and push
+
+on:
+  workflow_dispatch:
+  push:
+    branches: main
+  schedule:
+    - cron: '0 0 * * 0'
+
+env:
+  TEST_TAG: ${{ github.repository_owner }}/${{ matrix.image.program_name }}:test
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - program_name: "dhcp"
+          - program_name: "tftp"
+    steps:
+      - name: Set the PREVIOUS_STABLE_ALPINE env
+        id: alpine_version_checker
+        run: |
+          echo "::set-output name=PREVIOUS_STABLE_ALPINE::`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`"
+      - name: checkout code
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+      - name: Build and export to Docker
+        uses: docker/build-push-action@v2
+        with:
+          load: true
+          build-args: |
+            ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+          tags: ${{ env.TEST_TAG }}
+      - name: Test
+        run: |
+          docker run --rm ${{ env.TEST_TAG }}
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          build-args: |
+            ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}/${{ matrix.image.program_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64, linux/arm/v7
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/"${{ matrix.image.program_name }}":alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+            ghcr.io/${{ github.repository_owner }}/"${{ matrix.image.program_name }}:latest
