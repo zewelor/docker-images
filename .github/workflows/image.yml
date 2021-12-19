@@ -35,18 +35,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
-      - name: Build and export to Docker
-        uses: docker/build-push-action@v2
-        with:
-          load: true
-          context: ${{ matrix.image.program_name }}/
-          build-args: |
-            ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
-          tags: ${{ env.TEST_TAG }}
-      - name: Test
-        timeout-minutes: 1
-        run: |
-          docker run --rm ${{ env.TEST_TAG }}
+      # - name: Build and export to Docker
+      #   uses: docker/build-push-action@v2
+      #   with:
+      #     load: true
+      #     context: ${{ matrix.image.program_name }}/
+      #     build-args: |
+      #       ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+      #     tags: ${{ env.TEST_TAG }}
+      # - name: Test
+      #   timeout-minutes: 1
+      #   run: |
+      #     docker run --rm ${{ env.TEST_TAG }}
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
