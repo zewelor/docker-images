@@ -1,5 +1,5 @@
 ARG ALPINE_VERSION
-FROM alpine:${ALPINE_VERSION}
+FROM ghcr.io/zewelor/base:alpine-${ALPINE_VERSION}
 
 RUN apk update \
  && apk upgrade \
@@ -14,4 +14,4 @@ RUN chmod o+w /run
 
 USER nobody:nogroup
 
-ENTRYPOINT ["rsync"]
+CMD ["rsync"]
