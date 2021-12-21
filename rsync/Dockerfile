@@ -10,4 +10,8 @@ RUN apk update \
  && update-ca-certificates \
  && rm -rf /var/cache/apk/*
 
+RUN chmod o+w /run
+
+USER nobody:nogroup
+
 ENTRYPOINT ["rsync"]
