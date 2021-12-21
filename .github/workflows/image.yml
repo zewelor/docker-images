@@ -44,7 +44,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/base:latest
   build:
     runs-on: ubuntu-latest
-    needs: base
+    needs: base-image
     env:
       TEST_TAG: ${{ github.repository_owner }}/${{ matrix.image.program_name }}:test
     strategy:
