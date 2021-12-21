@@ -1,10 +1,6 @@
 ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION}
 
-RUN apk add --no-cache jq curl bind-tools
+RUN apk add --no-cache dumb-init
 
-COPY root /
-
-USER nobody:nogroup
-
-ENTRYPOINT /app/dyndns-updater.sh
+ENTRYPOINT ["dumb-init", "--"]
