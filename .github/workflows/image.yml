@@ -29,7 +29,7 @@ jobs:
           password: ${{ secrets.CR_PAT }}
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: true
           context: base/
@@ -75,7 +75,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
       # - name: Build and export to Docker
-      #   uses: docker/build-push-action@v2
+      #   uses: docker/build-push-action@v3
       #   with:
       #     load: true
       #     context: ${{ matrix.image.program_name }}/
@@ -88,7 +88,7 @@ jobs:
       #     docker run --rm ${{ env.TEST_TAG }}
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: true
           context: ${{ matrix.image.program_name }}/
