@@ -52,7 +52,6 @@ jobs:
       matrix:
         image:
           - program_name: "cloudflare-ddns"
-          - program_name: "dehydrated-cloudflare"
           - program_name: "dhcpd"
           - program_name: "rsync"
           - program_name: "tftp"
