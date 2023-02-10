@@ -7,4 +7,4 @@ COPY root /
 
 USER nobody:nogroup
 
-ENTRYPOINT /app/dyndns-updater.sh
+ENTRYPOINT ["/app/dyndns-updater.sh"]
