@@ -14,7 +14,7 @@ jobs:
       - name: Set the PREVIOUS_STABLE_ALPINE env
         id: alpine_version_checker
         run: |
-          echo "::set-output name=PREVIOUS_STABLE_ALPINE::`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`"
+          echo "PREVIOUS_STABLE_ALPINE=`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`" >> $GITHUB_OUTPUT
       - name: checkout code
         uses: actions/checkout@v3
       - uses: hadolint/hadolint-action@v3.1.0
@@ -64,7 +64,7 @@ jobs:
       - name: Set the PREVIOUS_STABLE_ALPINE env
         id: alpine_version_checker
         run: |
-          echo "::set-output name=PREVIOUS_STABLE_ALPINE::`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`"
+          echo "PREVIOUS_STABLE_ALPINE=`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`" >> $GITHUB_OUTPUT
       - name: checkout code
         uses: actions/checkout@v3
       - uses: hadolint/hadolint-action@v3.1.0
