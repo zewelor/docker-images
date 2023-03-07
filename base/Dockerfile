@@ -1,5 +1,4 @@
-ARG ALPINE_VERSION
-FROM alpine:${ALPINE_VERSION}
+FROM cgr.dev/chainguard/wolfi-base
 
 RUN apk add --no-cache dumb-init
 
