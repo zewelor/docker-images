@@ -114,6 +114,7 @@ jobs:
       - uses: hadolint/hadolint-action@v3.1.0
         with:
           ignore: DL3018
+          dockerfile: ruby/Dockerfile
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Docker meta
@@ -140,6 +141,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          context: ruby/
           build-args: |
             RUBY_VERSION=${{ matrix.ruby-version }}
           platforms: linux/amd64,linux/arm64
