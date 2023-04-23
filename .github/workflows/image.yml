@@ -42,7 +42,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          platforms: linux/amd64,linux/arm64, linux/arm/v7
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository_owner }}/base:alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
             ghcr.io/${{ github.repository_owner }}/base:latest
@@ -70,6 +70,16 @@ jobs:
         with:
           dockerfile: ${{ matrix.image.program_name }}/Dockerfile
           ignore: DL3018
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.program_name }}
+          tags: |
+            # full length sha
+            type=sha,format=long,prefix=
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -80,18 +90,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Build and export to Docker
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     load: true
-      #     context: ${{ matrix.image.program_name }}/
-      #     build-args: |
-      #       ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
-      #     tags: ${{ env.TEST_TAG }}
-      # - name: Test
-      #   timeout-minutes: 1
-      #   run: |
-      #     docker run --rm ${{ env.TEST_TAG }}
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v4
@@ -100,10 +98,51 @@ jobs:
           context: ${{ matrix.image.program_name }}/
           build-args: |
             ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          platforms: linux/amd64,linux/arm64, linux/arm/v7
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+ 
+  ruby:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: [3.2.2-slim]
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          ignore: DL3018
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ruby
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.program_name }}:alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.program_name }}:latest
+            # full length sha
+            type=sha,format=long,prefix=
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ matrix.ruby-version }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          # Token provided by gh. To allow pushing to ghcr from github actions 
+          # go to settings -> Actions -> General -> Workflow permissions -> Read and write permissions
+          password: ${{ secrets.GITHUB_TOKEN }} 
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          build-args: |
+            RUBY_VERSION=${{ matrix.ruby-version }}
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          
