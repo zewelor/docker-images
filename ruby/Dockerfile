@@ -5,8 +5,8 @@ ARG RUNTIME_PACKAGES="dumb-init libcurl4"
 ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive
 
 # Create app user
-RUN groupadd -g 1000 app && \
-    useradd -u 1000 -g app -s /bin/bash app && \
+RUN groupadd --gid 1000 app && \
+    useradd --uid 1000 -g app -s /bin/bash --create-home app && \
     mkdir -p ${APP_DIR} && \
     chown -R app:app ${APP_DIR}
 
