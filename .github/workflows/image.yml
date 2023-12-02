@@ -79,7 +79,8 @@ jobs:
             # full length sha
             type=sha,format=long,prefix=
             type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
-
+          flavor: |
+            latest=true
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
