@@ -7,3 +7,5 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# So it is owned by root and has the permissions vncserver seems to require:
+RUN mkdir /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix/
