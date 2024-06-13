@@ -112,7 +112,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: [3.2.2-slim]
+        ruby-version: 
+          - 3.2.2-slim
+          - 3.3.3-slim
     steps:
       - name: checkout code
         uses: actions/checkout@v4
