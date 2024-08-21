@@ -112,10 +112,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: 
+        ruby-version:
           - 3.2.4-slim
           - 3.2.5-slim
           - 3.3.4-slim
+    outputs:
+      ruby_versions: ${{ toJSON(matrix.ruby-version) }}
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -163,6 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        ruby-version: ${{ fromJSON(needs.base-ruby.outputs.ruby_versions) }}
         image:
           - chromium
     steps:
@@ -200,8 +203,10 @@ jobs:
         with:
           push: true
           context: ruby/${{ matrix.image }}/
-          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ github.job }}-${{ matrix.image }}
+          build-args: |
+            RUBY_VERSION=${{ matrix.ruby-version }}
+          cache-from: type=gha,scope=${{ github.job }}-${{ matrix.image }}-${{ matrix.ruby-version }}
+          cache-to: type=gha,mode=max,scope=${{ github.job }}-${{ matrix.image }}-${{ matrix.ruby-version }}
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}

@@ -1,4 +1,5 @@
-FROM ghcr.io/zewelor/ruby:3.2.2-slim
+ARG RUBY_VERSION
+FROM ghcr.io/zewelor/ruby:${RUBY_VERSION}
 
 # Install runtime packages and clean up
 # hadolint ignore=DL3008
