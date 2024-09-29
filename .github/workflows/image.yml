@@ -107,15 +107,29 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
 
+  latest-ruby:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fetch_version.outputs.latest_version }}
+    steps:
+      - id: fetch_version
+        name: Fetch Latest Stable Ruby Version
+        run: |
+          versions="$(curl -s 'https://raw.githubusercontent.com/docker-library/ruby/refs/heads/master/versions.json')"
+          echo "Fetched Ruby versions JSON."
+          latest_version=$(echo "$versions" | jq -r '
+            [ to_entries[]
+              | select(.value != null and (.key | test("^[0-9]+(\\.[0-9]+)*$")))
+              | .value.version
+            ]
+            | sort_by(. | split(".") | map(tonumber))
+            | last
+          ')
+          echo "Latest stable Ruby version: $latest_version"
+          echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
   base-ruby:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby-version:
-          - 3.2.4-slim
-          - 3.2.5-slim
-          - 3.3.4-slim
+    needs: latest-ruby
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -133,7 +147,7 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ matrix.ruby-version }}
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
@@ -151,7 +165,7 @@ jobs:
           push: true
           context: ruby/
           build-args: |
-            RUBY_VERSION=${{ matrix.ruby-version }}
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}
           cache-from: type=gha,scope=${{ github.job }}
           cache-to: type=gha,mode=max,scope=${{ github.job }}
           platforms: linux/amd64,linux/arm64
