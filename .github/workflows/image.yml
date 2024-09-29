@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '0 0 * * 0'
 
+env:
+  DOCKER_BUILD_CHECKS_ANNOTATIONS: false
+
 jobs:
   base-image:
     runs-on: ubuntu-latest
