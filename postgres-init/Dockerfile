@@ -11,7 +11,7 @@ RUN \
     ca-certificates \
     postgresql16-client
 
-COPY ./apps/postgres-init/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 
 USER nobody:nogroup
 
