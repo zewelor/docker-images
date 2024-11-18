@@ -64,6 +64,7 @@ jobs:
           - program_name: "rsync"
           - program_name: "tftp"
           - program_name: "sqlite3"
+          - program_name: "postgres-init"
     steps:
       - name: Set the PREVIOUS_STABLE_ALPINE env
         id: alpine_version_checker
