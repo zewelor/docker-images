@@ -1,7 +1,7 @@
 ARG RUBY_VERSION
 FROM ruby:${RUBY_VERSION}
 
-ARG RUNTIME_PACKAGES="dumb-init libcurl4"
+ARG RUNTIME_PACKAGES="catatonit libcurl4"
 ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive
 
 # Create app user
@@ -20,4 +20,4 @@ RUN apt-get update && \
 
 WORKDIR ${APP_DIR}
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/catatonit", "--"]

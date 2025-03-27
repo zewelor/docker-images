@@ -15,6 +15,6 @@ COPY entrypoint.sh /entrypoint.sh
 
 USER nobody:nogroup
 
-ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
+ENTRYPOINT ["catatonit", "--", "/entrypoint.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/postgres/postgres"

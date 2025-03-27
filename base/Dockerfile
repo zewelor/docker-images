@@ -1,6 +1,6 @@
 ARG ALPINE_VERSION
 FROM alpine:${ALPINE_VERSION}
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache catatonit
 
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["catatonit", "--"]
