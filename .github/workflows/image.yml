@@ -25,7 +25,7 @@ jobs:
           echo "PREVIOUS_STABLE_ALPINE=`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`" >> $GITHUB_OUTPUT
       - name: checkout code
         uses: actions/checkout@v5
-      - uses: hadolint/hadolint-action@v3.2.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: base/Dockerfile
           ignore: DL3018
@@ -76,7 +76,7 @@ jobs:
           echo "PREVIOUS_STABLE_ALPINE=`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep ">v" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`" >> $GITHUB_OUTPUT
       - name: checkout code
         uses: actions/checkout@v5
-      - uses: hadolint/hadolint-action@v3.2.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: ${{ matrix.image.program_name }}/Dockerfile
           ignore: DL3018
@@ -141,7 +141,7 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v5
-      - uses: hadolint/hadolint-action@v3.2.0
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           ignore: DL3018
           dockerfile: ruby/Dockerfile
