@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(just version:*)",
+      "Bash(just:*)",
+      "Bash(docker run:*)"
+    ]
+  }
+}

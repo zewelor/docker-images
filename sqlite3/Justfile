@@ -1,0 +1,3 @@
+import "../common.just"
+
+default: (_build-alpine "sqlite3")
