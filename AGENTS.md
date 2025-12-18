@@ -1,5 +1,22 @@
 # Docker Images Monorepo
 
+## Goals
+
+### Security
+- Minimal attack surface via multi-stage builds where practical
+- No secrets baked into images
+- Users can run with `--user` flag if needed (images default to root for flexibility)
+
+### Simplicity
+- Prefer maintainability over smaller image size
+- One clear pattern per use case (multi-stage vs single-stage)
+- Document trade-offs in comments
+
+### Maintainability
+- DRY: common.just for shared build logic
+- CI adds OCI labels automatically
+- Self-explanatory Dockerfile comments
+
 ## What
 Multiarch Docker images (amd64/arm64) for ghcr.io/zewelor. All Alpine-based images use dhi.io base images.
 
