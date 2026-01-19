@@ -1,0 +1,11 @@
+if __name__ == "__main__":
+    print("----------------------------------------------------------------")
+    print("Gokapi Importer Agent - Placeholder")
+    print("----------------------------------------------------------------")
+    print("This is a default placeholder script.")
+    print("To use the importer, please mount your actual Python script to:")
+    print("  /app/server.py")
+    print("")
+    print("Example Docker run command:")
+    print("  docker run -v ./my_server.py:/app/server.py your-image-name")
+    print("----------------------------------------------------------------")

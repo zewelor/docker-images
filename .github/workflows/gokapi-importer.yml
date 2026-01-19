@@ -1,0 +1,67 @@
+name: Build and push gokapi-importer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'gokapi-importer/**'
+  schedule:
+    # Run at 04:00 on day 1 and 15 of every month
+    - cron: '0 4 1,15 * *'
+
+env:
+  DOCKER_BUILD_CHECKS_ANNOTATIONS: false
+  IMAGE_NAME: gokapi-importer
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Hadolint is good practice, keeping it from your template
+      - uses: hadolint/hadolint-action@v3.3.0
+        with:
+          dockerfile: gokapi-importer/Dockerfile
+          # DL3008: Pin versions in apt-get install (Debian)
+          # DL3018: Pin versions in apk add (Alpine) - irrelevant here as we use Debian builder then Distroless
+          # DL3013: Pin versions in pip (we usually want latest in this context)
+          ignore: DL3008,DL3013
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: gokapi-importer/
+          # We don't need build-args for this simple image
+          cache-from: type=gha,scope=${{ env.IMAGE_NAME }}
+          cache-to: type=gha,mode=max,scope=${{ env.IMAGE_NAME }}
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
