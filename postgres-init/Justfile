@@ -1,3 +1,0 @@
-import "../common.just"
-
-default: (_build-alpine "postgres-init")
