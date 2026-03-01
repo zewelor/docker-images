@@ -1,3 +1,10 @@
 import "../common.just"
 
-default: (_build-ruby "ruby")
+default: (_build-ruby "ruby") (_build-ruby-distroless "ruby-distroless")
+
+[private]
+_build-ruby-distroless image_name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    distroless_debian_version=$(docker run --rm ruby:{{ruby_version}}-slim sh -c '. /etc/os-release && echo $VERSION_ID')
+    docker build --target distroless --build-arg RUBY_VERSION={{ruby_version}}-slim --build-arg DISTROLESS_DEBIAN_VERSION=${distroless_debian_version} -t {{image_name}} .
