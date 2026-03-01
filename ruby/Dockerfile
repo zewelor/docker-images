@@ -2,8 +2,8 @@ ARG RUBY_VERSION
 ARG DISTROLESS_DEBIAN_VERSION=13
 FROM ruby:${RUBY_VERSION} AS base
 
-ARG RUNTIME_PACKAGES="catatonit libcurl4"
-ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive
+ARG RUNTIME_PACKAGES="catatonit libcurl4 libjemalloc2"
+ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive LD_PRELOAD="libjemalloc.so.2"
 
 # Create app user
 RUN groupadd --gid 1000 app && \
@@ -39,6 +39,8 @@ RUN set -eux; \
     ldd /usr/bin/catatonit | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
     find /usr/lib -name 'libcurl.so*' -print0 | xargs -0 -r -n1 sh -c 'ldd "$1" || true' sh | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
     find /usr/lib -name 'libcurl.so*' >> "$libs_tmp"; \
+    find /usr/lib -name 'libjemalloc.so*' -print0 | xargs -0 -r -n1 sh -c 'ldd "$1" || true' sh | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
+    find /usr/lib -name 'libjemalloc.so*' >> "$libs_tmp"; \
     sort -u "$libs_tmp" | while read -r lib; do \
         case "$lib" in \
             /usr/lib/*|/usr/local/lib/*) dest="/distroless-root$lib" ;; \
@@ -54,7 +56,8 @@ RUN set -eux; \
 FROM gcr.io/distroless/base-debian${DISTROLESS_DEBIAN_VERSION}:nonroot AS distroless
 
 ENV APP_DIR=/app \
-    HOME=/home/nonroot
+    HOME=/home/nonroot \
+    LD_PRELOAD="libjemalloc.so.2"
 
 WORKDIR ${APP_DIR}
 
