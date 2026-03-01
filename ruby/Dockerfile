@@ -2,7 +2,7 @@ ARG RUBY_VERSION
 ARG DISTROLESS_DEBIAN_VERSION=13
 FROM ruby:${RUBY_VERSION} AS base
 
-ARG RUNTIME_PACKAGES="catatonit libcurl4 libjemalloc2"
+ARG RUNTIME_PACKAGES="catatonit libjemalloc2"
 ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive LD_PRELOAD="libjemalloc.so.2"
 
 # Create app user
@@ -33,23 +33,27 @@ RUN set -eux; \
     cp -a /usr/local/. /distroless-root/usr/local/; \
     cp -a /app/. /distroless-root/app/; \
     cp -a /usr/bin/catatonit /distroless-root/usr/bin/catatonit; \
+    # Keep runtime-only Ruby files in distroless image.
+    rm -rf /distroless-root/usr/local/include \
+    /distroless-root/usr/local/lib/pkgconfig \
+    /distroless-root/usr/local/lib/ruby/gems/*/cache \
+    /distroless-root/usr/local/lib/ruby/gems/*/doc; \
+    find /distroless-root/usr/local/lib/ruby -type f \( -name '*.o' -o -name '*.c' \) -delete; \
     libs_tmp=/tmp/distroless-libs; \
     ldd /usr/local/bin/ruby | awk '/=> \// {print $3} /^\// {print $1}' > "$libs_tmp"; \
     find /usr/local/lib/ruby -name '*.so' -print0 | xargs -0 -r -n1 sh -c 'ldd "$1" || true' sh | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
     ldd /usr/bin/catatonit | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
-    find /usr/lib -name 'libcurl.so*' -print0 | xargs -0 -r -n1 sh -c 'ldd "$1" || true' sh | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
-    find /usr/lib -name 'libcurl.so*' >> "$libs_tmp"; \
     find /usr/lib -name 'libjemalloc.so*' -print0 | xargs -0 -r -n1 sh -c 'ldd "$1" || true' sh | awk '/=> \// {print $3} /^\// {print $1}' >> "$libs_tmp"; \
     find /usr/lib -name 'libjemalloc.so*' >> "$libs_tmp"; \
     sort -u "$libs_tmp" | while read -r lib; do \
-        case "$lib" in \
-            /usr/lib/*|/usr/local/lib/*) dest="/distroless-root$lib" ;; \
-            /lib64/*) dest="/distroless-root/usr/lib64${lib#/lib64}" ;; \
-            /lib/*) dest="/distroless-root/usr/lib${lib#/lib}" ;; \
-            *) continue ;; \
-        esac; \
-        mkdir -p "$(dirname "$dest")"; \
-        cp -v "$lib" "$dest"; \
+    case "$lib" in \
+    /usr/lib/*|/usr/local/lib/*) dest="/distroless-root$lib" ;; \
+    /lib64/*) dest="/distroless-root/usr/lib64${lib#/lib64}" ;; \
+    /lib/*) dest="/distroless-root/usr/lib${lib#/lib}" ;; \
+    *) continue ;; \
+    esac; \
+    mkdir -p "$(dirname "$dest")"; \
+    cp -v "$lib" "$dest"; \
     done; \
     chown -R 65532:65532 /distroless-root/app
 
