@@ -5,20 +5,13 @@
   ],
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
-  "updateNotScheduled": false,
   "packageRules": [
     {
       "matchManagers": [
         "github-actions"
       ],
-      "schedule": [
-        "* 0-3 1 * *"
-      ],
-      "automergeSchedule": [
-        "* 0-3 1 * *"
-      ],
       "automerge": true,
-      "automergeType": "pr",
+      "automergeType": "branch",
       "platformAutomerge": false
     }
   ]
