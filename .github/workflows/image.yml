@@ -31,7 +31,7 @@ jobs:
       - id: fetch_version
         name: Fetch Previous Stable Alpine Version
         run: |
-          alpine_version="$(curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 https://dl-cdn.alpinelinux.org/alpine/ | grep \">v\" | cut -d 'v' -f 2 | cut -d '/' -f 1 | sort --field-separator=. --version-sort | tail -2 | head -1)"
+          alpine_version="$(./scripts/get_previous_stable_alpine.sh)"
           echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
           echo "Previous stable Alpine version: $alpine_version"
           echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
