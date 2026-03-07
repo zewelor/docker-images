@@ -39,7 +39,9 @@ jobs:
       - name: Set the PREVIOUS_STABLE_ALPINE env
         id: alpine_version_checker
         run: |
-          echo "PREVIOUS_STABLE_ALPINE=`curl -q https://dl-cdn.alpinelinux.org/alpine/ |grep \">v\" | cut -d 'v' -f 2 | cut -d '/' -f 1  | sort --field-separator=. --version-sort | tail -2 | head -1`" >> $GITHUB_OUTPUT
+          alpine_version="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 10 https://dl-cdn.alpinelinux.org/alpine/ | grep \">v\" | cut -d 'v' -f 2 | cut -d '/' -f 1 | sort --field-separator=. --version-sort | tail -2 | head -1)"
+          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
+          echo "PREVIOUS_STABLE_ALPINE=$alpine_version" >> "$GITHUB_OUTPUT"
       - name: checkout code
         uses: actions/checkout@v6
       - uses: hadolint/hadolint-action@v3.3.0
@@ -79,6 +81,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v7
         with:
+          pull: true
           push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           context: ${{ matrix.image.program_name }}/
           build-args: |
@@ -98,9 +101,9 @@ jobs:
       - id: fetch_version
         name: Fetch Latest Stable Ruby Version
         run: |
-          versions="$(curl -s 'https://raw.githubusercontent.com/docker-library/ruby/refs/heads/master/versions.json')"
+          versions="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 10 'https://raw.githubusercontent.com/docker-library/ruby/refs/heads/master/versions.json')"
           echo "Fetched Ruby versions JSON."
-          latest_version=$(echo "$versions" | jq -r '
+          latest_version=$(echo "$versions" | jq -re '
             [ to_entries[]
               | select(.value != null and (.key | test("^[0-9]+(\\.[0-9]+)*$")))
               | .value.version
@@ -146,6 +149,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v7
         with:
+          pull: true
           push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           context: ruby/
           target: base
@@ -195,6 +199,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v7
         with:
+          pull: true
           push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           context: ruby/
           target: distroless
