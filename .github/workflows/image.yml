@@ -22,9 +22,24 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
+  latest-alpine:
+    name: Discover previous stable Alpine
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
+    steps:
+      - id: fetch_version
+        name: Fetch Previous Stable Alpine Version
+        run: |
+          alpine_version="$(curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 https://dl-cdn.alpinelinux.org/alpine/ | grep \">v\" | cut -d 'v' -f 2 | cut -d '/' -f 1 | sort --field-separator=. --version-sort | tail -2 | head -1)"
+          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
+          echo "Previous stable Alpine version: $alpine_version"
+          echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.image.program_name }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: latest-alpine
     runs-on: ubuntu-latest
     env:
       TEST_TAG: ${{ github.repository_owner }}/${{ matrix.image.program_name }}:test
@@ -36,12 +51,6 @@ jobs:
           - program_name: "tftp"
           - program_name: "sqlite3"
     steps:
-      - name: Set the PREVIOUS_STABLE_ALPINE env
-        id: alpine_version_checker
-        run: |
-          alpine_version="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 10 https://dl-cdn.alpinelinux.org/alpine/ | grep \">v\" | cut -d 'v' -f 2 | cut -d '/' -f 1 | sort --field-separator=. --version-sort | tail -2 | head -1)"
-          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
-          echo "PREVIOUS_STABLE_ALPINE=$alpine_version" >> "$GITHUB_OUTPUT"
       - name: checkout code
         uses: actions/checkout@v6
       - uses: hadolint/hadolint-action@v3.3.0
@@ -56,7 +65,7 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ needs.latest-alpine.outputs.version }}
           flavor: |
             latest=true
       - name: Set up QEMU
@@ -85,7 +94,7 @@ jobs:
           push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           context: ${{ matrix.image.program_name }}/
           build-args: |
-            ALPINE_VERSION=${{ steps.alpine_version_checker.outputs.PREVIOUS_STABLE_ALPINE }}
+            ALPINE_VERSION=${{ needs.latest-alpine.outputs.version }}
           cache-from: ${{ (github.event_name != 'workflow_dispatch' || inputs.use_cache) && format('type=gha,scope={0}', matrix.image.program_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.program_name }}
           platforms: linux/amd64,linux/arm64
