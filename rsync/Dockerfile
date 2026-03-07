@@ -3,6 +3,8 @@ ARG ALPINE_VERSION
 # Build stage - has apk for installing packages and collecting runtime deps
 FROM dhi.io/alpine-base:${ALPINE_VERSION}-alpine${ALPINE_VERSION}-dev AS build
 
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
 RUN apk add --no-cache rsync openssh-client ca-certificates pax-utils && \
     mkdir -p /runtime-root/usr/bin /runtime-root/usr/lib /runtime-root/lib /runtime-root/etc && \
     cp -a /usr/bin/rsync /runtime-root/usr/bin/ && \
