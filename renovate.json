@@ -5,6 +5,13 @@
   ],
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
+  "schedule": [
+    "* 0-3 1 * *"
+  ],
+  "automergeSchedule": [
+    "* 0-3 1 * *"
+  ],
+  "updateNotScheduled": false,
   "packageRules": [
     {
       "matchManagers": [
