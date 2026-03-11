@@ -19,8 +19,9 @@ CI uses thin path-based workflows to decide what should run and reusable workflo
 - `.github/workflows/image.yml` runs a full rebuild for all images on `workflow_dispatch`, weekly `schedule`, and changes under `.github/workflows/**`.
 - `.github/workflows/image-ruby.yml` runs only the Ruby build when `ruby/**` changes, while ignoring Markdown-only and `Justfile`-only changes.
 - `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, and `.github/workflows/image-tftp.yml` run only the matching Alpine image when that image directory changes, while ignoring Markdown-only and `Justfile`-only changes.
-- Full Alpine rebuild workflows resolve the Alpine version once and pass it into the reusable Alpine build workflow.
-- The Alpine lookup command is intentionally inlined in CI and in `common.just` so there is no extra helper script to maintain.
+- `.github/workflows/reusable-alpine-version.yml` resolves the previous stable Alpine version once per workflow and exposes it as an output.
+- Alpine build workflows first call the reusable Alpine version workflow and then pass that output into the reusable Alpine image build workflow.
+- The Alpine lookup command is intentionally kept in one place in CI and mirrored in `common.just` for local builds.
 - `.github/workflows/reusable-alpine-image.yml` builds one Alpine image for a pre-resolved Alpine version.
 - `.github/workflows/reusable-ruby-image.yml` contains the shared Ruby build, tag, cache, and push logic.
 

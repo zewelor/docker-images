@@ -17,34 +17,16 @@ on:
       - '!**/Justfile'
 
 jobs:
-  latest-alpine:
-    name: Discover previous stable Alpine
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
-    steps:
-      - id: fetch_version
-        name: Fetch Previous Stable Alpine Version
-        run: |
-          alpine_version="$(
-            curl -fsSL \
-              --retry 5 \
-              --retry-all-errors \
-              --retry-delay 2 \
-              --connect-timeout 10 \
-              https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/latest-releases.yaml |
-            awk '/^  branch: v[0-9]+\.[0-9]+$/ { gsub(/^  branch: v/, "", $0); split($0, v, "."); printf "%s.%d\n", v[1], v[2] - 1; exit }'
-          )"
-          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
-          echo "Previous stable Alpine version: $alpine_version"
-          echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
+  alpine_version:
+    name: Resolve Alpine version
+    uses: ./.github/workflows/reusable-alpine-version.yml
 
   build:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    needs: latest-alpine
+    needs: alpine_version
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: sqlite3
-      alpine_version: ${{ needs.latest-alpine.outputs.version }}
+      alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
       publish: ${{ github.ref == 'refs/heads/main' }}
     secrets: inherit

@@ -53,6 +53,7 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - `.github/workflows/image.yml` - full rebuild for all images on workflow changes, manual dispatch, and schedule.
 - `.github/workflows/image-ruby.yml` - Ruby-only trigger workflow.
 - `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, `.github/workflows/image-tftp.yml` - per-image Alpine trigger workflows.
+- `.github/workflows/reusable-alpine-version.yml` - shared Alpine version lookup.
 - `.github/workflows/reusable-alpine-image.yml` - shared Alpine build logic for one image; callers resolve Alpine once and pass the version in.
 - `.github/workflows/reusable-ruby-image.yml` - shared Ruby build logic.
 
