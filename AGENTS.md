@@ -53,7 +53,6 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - `.github/workflows/image.yml` - full rebuild for all images on workflow changes, manual dispatch, and schedule.
 - `.github/workflows/image-ruby.yml` - Ruby-only trigger workflow.
 - `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, `.github/workflows/image-tftp.yml` - per-image Alpine trigger workflows.
-- `.github/workflows/image-alpine-shared.yml` - rebuilds all Alpine images when the shared Alpine version lookup script changes.
 - `.github/workflows/reusable-alpine-image.yml` - shared Alpine build logic for one image; callers resolve Alpine once and pass the version in.
 - `.github/workflows/reusable-ruby-image.yml` - shared Ruby build logic.
 
@@ -62,13 +61,11 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - Use `paths` and `paths-ignore` style exclusions to avoid rebuilds for docs-only changes where practical.
 - For per-image workflows, ignore Markdown-only and `Justfile`-only changes unless those files start affecting build behavior.
 - If a change affects only one image directory, only that image's workflow should run.
-- If a change affects shared Alpine CI logic, rebuild all Alpine images.
 - If a change affects `.github/workflows/**`, rebuild all images so workflow changes are exercised immediately.
 
 #### Adding a new image
 - If it follows the Alpine pattern, reuse `.github/workflows/reusable-alpine-image.yml`.
 - Add the image name to the matrix in `.github/workflows/image.yml`.
-- Add the image name to `.github/workflows/image-alpine-shared.yml` so shared Alpine helper changes rebuild it too.
 - Create a thin trigger workflow named `.github/workflows/image-<name>.yml` modeled after the existing per-image workflows.
 - Include path filters for `<name>/**` and exclude Markdown and `Justfile` changes unless that image needs different rules.
 
