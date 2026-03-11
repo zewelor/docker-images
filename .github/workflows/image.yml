@@ -1,4 +1,4 @@
-name: Build and push
+name: Build all images
 
 on:
   workflow_dispatch:
@@ -15,6 +15,8 @@ on:
     branches:
       - main
       - 'renovate/**'
+    paths:
+      - '.github/workflows/**'
   schedule:
     - cron: '0 0 * * 0'
 
@@ -22,205 +24,24 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
-  latest-alpine:
-    name: Discover previous stable Alpine
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - id: fetch_version
-        name: Fetch Previous Stable Alpine Version
-        run: |
-          alpine_version="$(./scripts/get_previous_stable_alpine.sh)"
-          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
-          echo "Previous stable Alpine version: $alpine_version"
-          echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
-
-  build:
-    name: Build ${{ matrix.image.program_name }}
+  alpine:
+    name: Build ${{ matrix.image_name }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    needs: latest-alpine
-    runs-on: ubuntu-latest
-    env:
-      TEST_TAG: ${{ github.repository_owner }}/${{ matrix.image.program_name }}:test
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - program_name: "rsync"
-          - program_name: "tftp"
-          - program_name: "sqlite3"
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - uses: hadolint/hadolint-action@v3.3.0
-        with:
-          dockerfile: ${{ matrix.image.program_name }}/Dockerfile
-          ignore: DL3018
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.program_name }}
-          tags: |
-            # full length sha
-            type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ needs.latest-alpine.outputs.version }}
-          flavor: |
-            latest=true
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Login to dhi.io
-        uses: nick-fields/retry@v3
-        with:
-          timeout_seconds: 30
-          max_attempts: 3
-          command: |
-            echo "${{ secrets.DOCKER_DHI_TOKEN }}" | docker login dhi.io -u "${{ secrets.DOCKER_DHI_USERNAME }}" --password-stdin
-      - name: Login to GitHub Container Registry
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v7
-        with:
-          pull: true
-          push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-          context: ${{ matrix.image.program_name }}/
-          build-args: |
-            ALPINE_VERSION=${{ needs.latest-alpine.outputs.version }}
-          cache-from: ${{ (github.event_name != 'workflow_dispatch' || inputs.use_cache) && format('type=gha,scope={0}', matrix.image.program_name) || '' }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image.program_name }}
-          platforms: linux/amd64,linux/arm64
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
+        image_name: [rsync, tftp, sqlite3]
+    uses: ./.github/workflows/reusable-alpine-image.yml
+    with:
+      image_name: ${{ matrix.image_name }}
+      publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+    secrets: inherit
 
-  latest-ruby:
-    name: Discover latest Ruby
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.fetch_version.outputs.latest_version }}
-    steps:
-      - id: fetch_version
-        name: Fetch Latest Stable Ruby Version
-        run: |
-          versions="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 10 'https://raw.githubusercontent.com/docker-library/ruby/refs/heads/master/versions.json')"
-          echo "Fetched Ruby versions JSON."
-          latest_version=$(echo "$versions" | jq -re '
-            [ to_entries[]
-              | select(.value != null and (.key | test("^[0-9]+(\\.[0-9]+)*$")))
-              | .value.version
-            ]
-            | sort_by(. | split(".") | map(tonumber))
-            | last
-          ')
-          echo "Latest stable Ruby version: $latest_version"
-          echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
   ruby:
     name: Build ruby
-    runs-on: ubuntu-latest
-    needs: latest-ruby
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - uses: hadolint/hadolint-action@v3.3.0
-        with:
-          ignore: DL3018
-          dockerfile: ruby/Dockerfile
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ruby
-          tags: |
-            # full length sha
-            type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-slim
-            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-slim
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Login to GitHub Container Registry
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v7
-        with:
-          pull: true
-          push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-          context: ruby/
-          target: base
-          build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
-          cache-from: type=gha,scope=ruby
-          cache-to: type=gha,mode=max,scope=ruby
-          platforms: linux/amd64,linux/arm64
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-
-  ruby-distroless:
-    name: Build ruby-distroless
-    runs-on: ubuntu-latest
-    needs: [latest-ruby, ruby]
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ruby
-          tags: |
-            # full length sha
-            type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-distroless
-            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-distroless
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Login to GitHub Container Registry
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Fetch Debian Version
-        id: fetch-debian-version
-        run: |
-          docker pull ruby:${{ needs.latest-ruby.outputs.version }}-slim
-          DISTROLESS_DEBIAN_VERSION=$(docker run --rm ruby:${{ needs.latest-ruby.outputs.version }}-slim sh -c '. /etc/os-release && echo $VERSION_ID')
-          echo "distroless_debian_version=${DISTROLESS_DEBIAN_VERSION}" >> $GITHUB_OUTPUT
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v7
-        with:
-          pull: true
-          push: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
-          context: ruby/
-          target: distroless
-          build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
-            DISTROLESS_DEBIAN_VERSION=${{ steps.fetch-debian-version.outputs.distroless_debian_version }}
-          cache-from: |
-            type=gha,scope=ruby
-            type=gha,scope=ruby-distroless
-          cache-to: type=gha,mode=max,scope=ruby-distroless
-          platforms: linux/amd64,linux/arm64
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
+    uses: ./.github/workflows/reusable-ruby-image.yml
+    with:
+      publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+    secrets: inherit

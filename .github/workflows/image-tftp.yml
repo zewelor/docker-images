@@ -1,0 +1,26 @@
+name: Build tftp
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tftp/**'
+      - '!**/*.md'
+      - '!**/Justfile'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths:
+      - 'tftp/**'
+      - '!**/*.md'
+      - '!**/Justfile'
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    uses: ./.github/workflows/reusable-alpine-image.yml
+    with:
+      image_name: tftp
+      publish: ${{ github.ref == 'refs/heads/main' }}
+    secrets: inherit

@@ -1,0 +1,25 @@
+name: Build ruby
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'ruby/**'
+      - '!**/*.md'
+      - '!**/Justfile'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths:
+      - 'ruby/**'
+      - '!**/*.md'
+      - '!**/Justfile'
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    uses: ./.github/workflows/reusable-ruby-image.yml
+    with:
+      publish: ${{ github.ref == 'refs/heads/main' }}
+    secrets: inherit

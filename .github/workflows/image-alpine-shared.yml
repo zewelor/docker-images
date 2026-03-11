@@ -1,0 +1,27 @@
+name: Build all alpine images
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/get_previous_stable_alpine.sh'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths:
+      - 'scripts/get_previous_stable_alpine.sh'
+
+jobs:
+  alpine:
+    name: Build ${{ matrix.image_name }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image_name: [rsync, tftp, sqlite3]
+    uses: ./.github/workflows/reusable-alpine-image.yml
+    with:
+      image_name: ${{ matrix.image_name }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
+    secrets: inherit

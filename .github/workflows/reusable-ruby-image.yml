@@ -1,0 +1,142 @@
+name: Reusable ruby image build
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        description: Push image to registry
+        required: false
+        default: false
+        type: boolean
+      use_cache:
+        description: Use Docker cache
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DOCKER_BUILD_CHECKS_ANNOTATIONS: false
+
+jobs:
+  latest-ruby:
+    name: Discover latest Ruby
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fetch_version.outputs.latest_version }}
+    steps:
+      - id: fetch_version
+        name: Fetch Latest Stable Ruby Version
+        run: |
+          versions="$(curl -fsSL --retry 3 --retry-all-errors --connect-timeout 10 'https://raw.githubusercontent.com/docker-library/ruby/refs/heads/master/versions.json')"
+          echo "Fetched Ruby versions JSON."
+          latest_version=$(echo "$versions" | jq -re '
+            [ to_entries[]
+              | select(.value != null and (.key | test("^[0-9]+(\\.[0-9]+)*$")))
+              | .value.version
+            ]
+            | sort_by(. | split(".") | map(tonumber))
+            | last
+          ')
+          echo "Latest stable Ruby version: $latest_version"
+          echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
+
+  ruby:
+    name: Build ruby
+    runs-on: ubuntu-latest
+    needs: latest-ruby
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - uses: hadolint/hadolint-action@v3.3.0
+        with:
+          ignore: DL3018
+          dockerfile: ruby/Dockerfile
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ruby
+          tags: |
+            # full length sha
+            type=sha,format=long,prefix=
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-slim
+            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-slim
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.publish }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v7
+        with:
+          pull: true
+          push: ${{ inputs.publish }}
+          context: ruby/
+          target: base
+          build-args: |
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+          cache-from: ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
+          cache-to: type=gha,mode=max,scope=ruby
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+
+  ruby-distroless:
+    name: Build ruby-distroless
+    runs-on: ubuntu-latest
+    needs: [latest-ruby, ruby]
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ruby
+          tags: |
+            # full length sha
+            type=sha,format=long,prefix=
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-distroless
+            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-distroless
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.publish }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fetch Debian Version
+        id: fetch-debian-version
+        run: |
+          docker pull ruby:${{ needs.latest-ruby.outputs.version }}-slim
+          DISTROLESS_DEBIAN_VERSION=$(docker run --rm ruby:${{ needs.latest-ruby.outputs.version }}-slim sh -c '. /etc/os-release && echo $VERSION_ID')
+          echo "distroless_debian_version=${DISTROLESS_DEBIAN_VERSION}" >> $GITHUB_OUTPUT
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v7
+        with:
+          pull: true
+          push: ${{ inputs.publish }}
+          context: ruby/
+          target: distroless
+          build-args: |
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            DISTROLESS_DEBIAN_VERSION=${{ steps.fetch-debian-version.outputs.distroless_debian_version }}
+          cache-from: |
+            ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
+            ${{ inputs.use_cache && 'type=gha,scope=ruby-distroless' || '' }}
+          cache-to: type=gha,mode=max,scope=ruby-distroless
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
