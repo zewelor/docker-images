@@ -61,6 +61,9 @@ FROM gcr.io/distroless/base-debian${DISTROLESS_DEBIAN_VERSION}:nonroot AS distro
 
 ENV APP_DIR=/app \
     HOME=/home/nonroot \
+    BUNDLE_USER_HOME=/tmp/bundler \
+    BUNDLE_USER_CACHE=/tmp/bundler/cache \
+    BUNDLE_USER_PLUGIN=/tmp/bundler/plugin \
     LD_PRELOAD="libjemalloc.so.2"
 
 WORKDIR ${APP_DIR}
