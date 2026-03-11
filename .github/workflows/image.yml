@@ -24,9 +24,26 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
+  latest-alpine:
+    name: Discover previous stable Alpine
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+      - id: fetch_version
+        name: Fetch Previous Stable Alpine Version
+        run: |
+          alpine_version="$(./scripts/get_previous_stable_alpine.sh)"
+          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
+          echo "Previous stable Alpine version: $alpine_version"
+          echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
+
   alpine:
     name: Build ${{ matrix.image_name }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: latest-alpine
     strategy:
       fail-fast: false
       matrix:
@@ -34,6 +51,7 @@ jobs:
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}
+      alpine_version: ${{ needs.latest-alpine.outputs.version }}
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
     secrets: inherit

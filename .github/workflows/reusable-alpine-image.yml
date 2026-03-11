@@ -7,6 +7,10 @@ on:
         description: Image directory name
         required: true
         type: string
+      alpine_version:
+        description: Resolved Alpine version to build against
+        required: true
+        type: string
       publish:
         description: Push image to registry
         required: false
@@ -22,25 +26,8 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
-  latest-alpine:
-    name: Discover previous stable Alpine
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v6
-      - id: fetch_version
-        name: Fetch Previous Stable Alpine Version
-        run: |
-          alpine_version="$(./scripts/get_previous_stable_alpine.sh)"
-          echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
-          echo "Previous stable Alpine version: $alpine_version"
-          echo "previous_stable_alpine=$alpine_version" >> "$GITHUB_OUTPUT"
-
   build:
     name: Build ${{ inputs.image_name }}
-    needs: latest-alpine
     runs-on: ubuntu-latest
     env:
       TEST_TAG: ${{ github.repository_owner }}/${{ inputs.image_name }}:test
@@ -59,7 +46,7 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ needs.latest-alpine.outputs.version }}
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ inputs.alpine_version }}
           flavor: |
             latest=true
       - name: Set up QEMU
@@ -88,7 +75,7 @@ jobs:
           push: ${{ inputs.publish }}
           context: ${{ inputs.image_name }}/
           build-args: |
-            ALPINE_VERSION=${{ needs.latest-alpine.outputs.version }}
+            ALPINE_VERSION=${{ inputs.alpine_version }}
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
           platforms: linux/amd64,linux/arm64
