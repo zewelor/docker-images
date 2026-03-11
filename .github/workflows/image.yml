@@ -30,8 +30,6 @@ jobs:
     outputs:
       version: ${{ steps.fetch_version.outputs.previous_stable_alpine }}
     steps:
-      - name: checkout code
-        uses: actions/checkout@v6
       - id: fetch_version
         name: Fetch Previous Stable Alpine Version
         run: |
@@ -42,7 +40,7 @@ jobs:
               --retry-delay 2 \
               --connect-timeout 10 \
               https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/latest-releases.yaml |
-            awk '/^  branch: v[0-9]+\.[0-9]+$/ { gsub(/^  branch: v/, "", $0); split($0, v, "."); printf "%s.%d\\n", v[1], v[2] - 1; exit }'
+            awk '/^  branch: v[0-9]+\.[0-9]+$/ { gsub(/^  branch: v/, "", $0); split($0, v, "."); printf "%s.%d\n", v[1], v[2] - 1; exit }'
           )"
           echo "$alpine_version" | grep -Eq '^[0-9]+\.[0-9]+$'
           echo "Previous stable Alpine version: $alpine_version"
