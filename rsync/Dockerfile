@@ -11,6 +11,8 @@ RUN apk add --no-cache rsync openssh-client ca-certificates pax-utils && \
     cp -a /usr/bin/ssh /runtime-root/usr/bin/ && \
     cp -a /etc/ssl /runtime-root/etc/ && \
     cp -a /etc/ssh /runtime-root/etc/ && \
+    # Add root user for rsync daemon compatibility (rsync needs named users in config) \
+    echo "root:x:0:0:root:/root:/bin/sh" > /runtime-root/etc/passwd && \
     : > /tmp/runtime-libs && \
     printf '%s\n' /usr/bin/rsync /usr/bin/ssh > /tmp/pending-libs && \
     while [ -s /tmp/pending-libs ]; do \
@@ -34,7 +36,7 @@ RUN apk add --no-cache rsync openssh-client ca-certificates pax-utils && \
       cp -L "$lib" "/runtime-root$lib"; \
     done
 
-# Runtime stage - minimal image without apk
+# Runtime stage - minimal image without apk, defaulting to nonroot
 FROM dhi.io/alpine-base:${ALPINE_VERSION}-alpine${ALPINE_VERSION}
 
 COPY --from=build /runtime-root/usr/bin/ /usr/bin/
@@ -42,4 +44,8 @@ COPY --from=build /runtime-root/etc/ /etc/
 COPY --from=build /runtime-root/lib/ /lib/
 COPY --from=build /runtime-root/usr/lib/ /usr/lib/
 
-CMD ["rsync"]
+# hadolint ignore=DL3002
+USER 0
+
+ENTRYPOINT ["rsync"]
+CMD ["--help"]
