@@ -11,8 +11,9 @@ RUN apk add --no-cache rsync openssh-client ca-certificates pax-utils && \
     cp -a /usr/bin/ssh /runtime-root/usr/bin/ && \
     cp -a /etc/ssl /runtime-root/etc/ && \
     cp -a /etc/ssh /runtime-root/etc/ && \
-    # Add root user for rsync daemon compatibility (rsync needs named users in config) \
+    # Add root user and group for rsync daemon compatibility (rsync needs named users/groups in config) \
     echo "root:x:0:0:root:/root:/bin/sh" > /runtime-root/etc/passwd && \
+    echo "root:x:0:" > /runtime-root/etc/group && \
     : > /tmp/runtime-libs && \
     printf '%s\n' /usr/bin/rsync /usr/bin/ssh > /tmp/pending-libs && \
     while [ -s /tmp/pending-libs ]; do \
