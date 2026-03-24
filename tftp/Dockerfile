@@ -15,7 +15,9 @@ COPY --from=build /var/tftpboot /var/tftpboot
 VOLUME /var/tftpboot
 EXPOSE 69/udp
 
-# TFTP needs root to bind to port 69
+# TFTP server must run as root to bind to privileged port 69 (ports < 1024)
+# in.tftpd drops privileges internally after binding to the port
+# hadolint ignore=DL3002
 USER 0
 
 ENTRYPOINT ["in.tftpd"]
