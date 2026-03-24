@@ -21,4 +21,4 @@ EXPOSE 69/udp
 USER 0
 
 ENTRYPOINT ["in.tftpd"]
-CMD ["-L", "-v", "--secure", "--ipv4", "/var/tftpboot"]
+CMD ["--listen", "--secure", "--ipv4", "/var/tftpboot"]
