@@ -10,11 +10,13 @@ RUN apk add --no-cache tftp-hpa && \
 FROM dhi.io/alpine-base:${ALPINE_VERSION}-alpine${ALPINE_VERSION}
 
 COPY --from=build /usr/sbin/in.tftpd /usr/sbin/
-COPY --from=build /lib/ld-musl-*.so.1 /lib/
 COPY --from=build /var/tftpboot /var/tftpboot
 
 VOLUME /var/tftpboot
 EXPOSE 69/udp
+
+# TFTP needs root to bind to port 69
+USER 0
 
 ENTRYPOINT ["in.tftpd"]
 CMD ["-L", "-v", "--secure", "--ipv4", "/var/tftpboot"]
