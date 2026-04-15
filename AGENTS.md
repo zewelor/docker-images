@@ -16,6 +16,7 @@
 - DRY: common.just for shared build logic
 - CI adds OCI labels automatically
 - Self-explanatory Dockerfile comments
+- Keep Docker build contexts minimal with a `.dockerignore` next to every `Dockerfile`
 
 ## What
 Multiarch Docker images (amd64/arm64) for ghcr.io/zewelor. All Alpine-based images use dhi.io base images.
@@ -46,6 +47,12 @@ just build-all            # build all images from root
 
 **Non-Alpine:** ruby (uses ruby:slim)
 
+### Build context
+- Every image directory must contain a `.dockerignore` adjacent to its `Dockerfile`.
+- Default to a whitelist-style `.dockerignore` that includes only files needed for the build context.
+- For the current images, the build context should stay limited to `Dockerfile` and `.dockerignore`; do not send `Justfile`, `README.md`, or other repo files unless the Dockerfile actually needs them.
+- If a new image needs local files during `docker build`, explicitly opt those files into `.dockerignore` instead of widening the whole context.
+
 ### Catatonit
 Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) or init containers (postgres-init).
 
@@ -69,6 +76,7 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - Add the image name to the matrix in `.github/workflows/image.yml`.
 - Create a thin trigger workflow named `.github/workflows/image-<name>.yml` modeled after the existing per-image workflows.
 - Include path filters for `<name>/**` and exclude Markdown and `Justfile` changes unless that image needs different rules.
+- Add a `.dockerignore` next to `<name>/Dockerfile`. Treat it as required, and keep the context to the smallest explicit whitelist that still lets the image build.
 
 #### Changing CI
 - Prefer changing reusable workflows before copying steps into trigger workflows.
