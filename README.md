@@ -18,8 +18,8 @@ Because the repo prefers freshness over reproducibility, local builds and CI alw
 CI uses thin path-based workflows to decide what should run and reusable workflows to keep the actual build logic DRY.
 
 - `.github/workflows/image.yml` runs a full rebuild for all images on `workflow_dispatch`, weekly `schedule`, and changes under `.github/workflows/**`.
-- `.github/workflows/image-ruby.yml` runs only the Ruby build when `ruby/**` changes, while ignoring Markdown-only and `Justfile`-only changes.
-- `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, and `.github/workflows/image-tftp.yml` run only the matching Alpine image when that image directory changes, while ignoring Markdown-only and `Justfile`-only changes.
+- `.github/workflows/image-ruby.yml` runs only the Ruby build when `ruby/**` changes, while ignoring Markdown-only and `justfile`-only changes.
+- `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, and `.github/workflows/image-tftp.yml` run only the matching Alpine image when that image directory changes, while ignoring Markdown-only and `justfile`-only changes.
 - `.github/workflows/reusable-alpine-version.yml` resolves the previous stable Alpine version once per workflow and exposes it as an output.
 - Alpine build workflows first call the reusable Alpine version workflow and then pass that output into the reusable Alpine image build workflow.
 - The Alpine lookup command is intentionally kept in one place in CI and mirrored in `common.just` for local builds.
@@ -33,5 +33,5 @@ This split exists because GitHub Actions `paths` filtering works at the workflow
 - New Alpine image: add the image directory, add the image name to the matrix in `.github/workflows/image.yml`, and create a thin trigger workflow similar to `.github/workflows/image-rsync.yml`.
 - New Ruby-like or otherwise special image: create a dedicated trigger workflow and either reuse an existing reusable workflow or add a new one if the build pattern is genuinely different.
 - Keep trigger workflows small: they should mainly define `on: ... paths:` and call a reusable workflow.
-- Preserve the doc ignores in path-based workflows so Markdown-only or `Justfile`-only edits do not rebuild images.
+- Preserve the doc ignores in path-based workflows so Markdown-only or `justfile`-only edits do not rebuild images.
 - If a CI change affects `.github/workflows/**`, let the full rebuild exercise everything.

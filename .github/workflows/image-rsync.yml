@@ -6,7 +6,7 @@ on:
     paths:
       - 'rsync/**'
       - '!**/*.md'
-      - '!**/Justfile'
+      - '!**/justfile'
   push:
     branches:
       - main
@@ -14,7 +14,7 @@ on:
     paths:
       - 'rsync/**'
       - '!**/*.md'
-      - '!**/Justfile'
+      - '!**/justfile'
 
 jobs:
   alpine_version:

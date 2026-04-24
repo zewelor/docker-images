@@ -6,7 +6,7 @@ on:
     paths:
       - 'ruby/**'
       - '!**/*.md'
-      - '!**/Justfile'
+      - '!**/justfile'
   push:
     branches:
       - main
@@ -14,7 +14,7 @@ on:
     paths:
       - 'ruby/**'
       - '!**/*.md'
-      - '!**/Justfile'
+      - '!**/justfile'
 
 jobs:
   build:

@@ -50,7 +50,7 @@ just build-all            # build all images from root
 ### Build context
 - Every image directory must contain a `.dockerignore` adjacent to its `Dockerfile`.
 - Default to a whitelist-style `.dockerignore` that includes only files needed for the build context.
-- For the current images, the build context should stay limited to `Dockerfile` and `.dockerignore`; do not send `Justfile`, `README.md`, or other repo files unless the Dockerfile actually needs them.
+- For the current images, the build context should stay limited to `Dockerfile` and `.dockerignore`; do not send `justfile`, `README.md`, or other repo files unless the Dockerfile actually needs them.
 - If a new image needs local files during `docker build`, explicitly opt those files into `.dockerignore` instead of widening the whole context.
 
 ### Catatonit
@@ -67,7 +67,7 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 #### CI maintenance rules
 - Keep path-based trigger workflows thin. They should mostly define `paths` filters and call a reusable workflow.
 - Use `paths` and `paths-ignore` style exclusions to avoid rebuilds for docs-only changes where practical.
-- For per-image workflows, ignore Markdown-only and `Justfile`-only changes unless those files start affecting build behavior.
+- For per-image workflows, ignore Markdown-only and `justfile`-only changes unless those files start affecting build behavior.
 - If a change affects only one image directory, only that image's workflow should run.
 - If a change affects `.github/workflows/**`, rebuild all images so workflow changes are exercised immediately.
 
@@ -75,7 +75,7 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - If it follows the Alpine pattern, reuse `.github/workflows/reusable-alpine-image.yml`.
 - Add the image name to the matrix in `.github/workflows/image.yml`.
 - Create a thin trigger workflow named `.github/workflows/image-<name>.yml` modeled after the existing per-image workflows.
-- Include path filters for `<name>/**` and exclude Markdown and `Justfile` changes unless that image needs different rules.
+- Include path filters for `<name>/**` and exclude Markdown and `justfile` changes unless that image needs different rules.
 - Add a `.dockerignore` next to `<name>/Dockerfile`. Treat it as required, and keep the context to the smallest explicit whitelist that still lets the image build.
 
 #### Changing CI
