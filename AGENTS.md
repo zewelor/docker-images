@@ -47,6 +47,11 @@ just build-all            # build all images from root
 
 **Non-Alpine:** ruby (uses ruby:slim)
 
+**Debian Hardened:** nvim (uses `dhi.io/debian-base`)
+- Build stage: `dhi.io/debian-base:<version>-dev`
+- Runtime stage: `dhi.io/debian-base:<version>`
+- Use for interactive Debian-based tools where copying only the exact runtime closure is not worth the complexity.
+
 ### Build context
 - Every image directory must contain a `.dockerignore` adjacent to its `Dockerfile`.
 - Default to a whitelist-style `.dockerignore` that includes only files needed for the build context.
@@ -60,9 +65,11 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 - `.github/workflows/image.yml` - full rebuild for all images on workflow changes, manual dispatch, and schedule.
 - `.github/workflows/image-ruby.yml` - Ruby-only trigger workflow.
 - `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, `.github/workflows/image-tftp.yml` - per-image Alpine trigger workflows.
+- `.github/workflows/image-nvim.yml` - per-image Debian trigger workflow.
 - `.github/workflows/reusable-alpine-version.yml` - shared Alpine version lookup.
 - `.github/workflows/reusable-alpine-image.yml` - shared Alpine build logic for one image; callers resolve Alpine once and pass the version in.
 - `.github/workflows/reusable-ruby-image.yml` - shared Ruby build logic.
+- `.github/workflows/reusable-debian-image.yml` - shared Debian Hardened build logic.
 
 #### CI maintenance rules
 - Keep path-based trigger workflows thin. They should mostly define `paths` filters and call a reusable workflow.

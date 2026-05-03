@@ -1,0 +1,28 @@
+name: Build nvim
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'nvim/**'
+      - '!**/*.md'
+      - '!**/justfile'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths:
+      - 'nvim/**'
+      - '!**/*.md'
+      - '!**/justfile'
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    uses: ./.github/workflows/reusable-debian-image.yml
+    with:
+      image_name: nvim
+      debian_tag: trixie-debian13
+      release_tag: '13'
+      publish: ${{ github.ref == 'refs/heads/main' }}
+    secrets: inherit

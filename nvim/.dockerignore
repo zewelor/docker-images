@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!.dockerignore
+!config/
+!config/nvim/
+!config/nvim/**

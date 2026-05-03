@@ -16,3 +16,8 @@ _build-alpine image_name:
 [private]
 _build-ruby image_name:
     docker build --pull --build-arg RUBY_VERSION={{ruby_version}}-slim -t {{image_name}} .
+
+# Build Debian-based image
+[private]
+_build-debian image_name:
+    docker build --pull --build-arg DHI_DEBIAN_TAG=trixie-debian13 -t {{image_name}} .
