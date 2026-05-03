@@ -1,6 +1,21 @@
 # nvim
 
-Minimal Neovim image based on Docker Hardened Images Debian.
+Minimal Neovim image for lightweight editing in containers and Kubernetes debug sessions.
+
+The image is built on Docker Hardened Images Debian and keeps the runtime intentionally small, predictable, and editing-focused. It is designed for cases where full personal dotfiles would be overkill, especially when opening files through ephemeral debug containers such as `nvim_pod`.
+
+## Goals
+
+- fast startup and low operational overhead
+- useful file navigation and search out of the box
+- build-time plugin installation with no runtime network dependency
+- practical Git support without turning the image into a full development environment
+
+## Build
+
+```bash
+docker build -t ghcr.io/zewelor/nvim ./nvim
+```
 
 ## Run
 
@@ -8,24 +23,96 @@ Minimal Neovim image based on Docker Hardened Images Debian.
 docker run --rm -it -v "$PWD":/workspace ghcr.io/zewelor/nvim
 ```
 
-## Included plugins
+Runtime defaults:
 
-- `catppuccin/nvim` - colorscheme
-- `nvim-mini/mini.icons` - icons
-- `nvim-mini/mini.pairs` - autopairs
-- `nvim-mini/mini.surround` - surround
-- `nvim-neo-tree/neo-tree.nvim` - file tree
-- `lewis6991/gitsigns.nvim` - git signs in the gutter
-- `nvim-telescope/telescope.nvim` - file and text search
-- `folke/which-key.nvim` - keybinding hints
+- working directory: `/workspace`
+- user: `65532:65532`
+- `HOME=/tmp`
+- `XDG_CONFIG_HOME=/etc/xdg`
 
 ## Included tools
 
+- `nvim`
 - `git`
 - `ripgrep`
 - `fd-find`
 
-## Notes
+`fd-find` is wired so Telescope can use `fdfind` in Debian-based images.
 
-- The image keeps the config intentionally minimal and non-opinionated.
-- Plugins are installed at build time to avoid network access at runtime.
+## Included plugins
+
+- `catppuccin/nvim` - colorscheme (`latte`, transparent background)
+- `nvim-mini/mini.icons` - icon provider for UI plugins
+- `nvim-mini/mini.pairs` - lightweight autopairs
+- `nvim-mini/mini.surround` - lightweight surround editing
+- `folke/which-key.nvim` - keybinding hints
+- `nvim-neo-tree/neo-tree.nvim` - file tree
+- `lewis6991/gitsigns.nvim` - Git gutter signs and hunk actions
+- `nvim-telescope/telescope.nvim` - file and text search
+- `nvim-lua/plenary.nvim` - Telescope helper dependency
+- `MunifTanjim/nui.nvim` - Neo-tree UI dependency
+
+Useful mappings:
+
+- `<leader>e` - toggle Neo-tree
+- `<leader>ff` - find files
+- `<leader>fg` - live grep
+
+## Intentionally excluded
+
+This image does not try to be a full IDE. It intentionally does not add:
+
+- LSP servers
+- Tree-sitter grammars beyond what Debian ships with Neovim itself
+- formatters or linters
+- language-specific toolchains
+- the full personal Neovim configuration from the dotfiles repo
+
+If a feature increases image weight or maintenance burden without helping the core edit-in-a-container workflow, it stays out.
+
+## Build and update model
+
+- config lives in `config/nvim/` and is copied to `/etc/xdg/nvim`
+- plugins are installed during the image build with `Lazy! sync`
+- plugin `.git` directories are removed after sync to avoid shipping unused metadata
+- runtime never installs or updates plugins
+- changing plugin versions means editing `config/nvim/init.lua` and rebuilding the image
+
+This keeps runtime behavior deterministic and avoids network access from production pods or ephemeral debug containers.
+
+## Size trade-offs
+
+The image is currently about `140 MiB`.
+
+Largest runtime chunks:
+
+- `/usr/lib/git-core` - about `25 MiB`
+- `/usr/share/nvim` - about `24 MiB`
+- `/usr/local/share/nvim` - about `9.7 MiB`
+
+The obvious candidate for future trimming is `git-core`, but it stays for now.
+
+Why:
+
+- removing it still leaves many basic local commands working (`git diff`, `git blame`, `git show`, `git status`, `git worktree`)
+- but it turns the image into a partial Git client
+- for example, `git submodule` disappears without `git-core`
+- `git-core` also carries helper programs used by non-local Git flows
+
+For this image, predictable Git behavior is worth more than saving a few extra megabytes.
+
+## Maintenance notes
+
+- `telescope.nvim` is pinned to `0.1.8` because Debian Trixie currently ships Neovim `0.10.4`, while newer Telescope releases require Neovim `0.11+`
+- Git templates are copied into the runtime image so `git init` works without template warnings
+- if you add new runtime tools, remember to copy both the executable and any required symlink targets or shared libraries into the runtime stage
+
+## Primary use case
+
+This image is primarily meant for:
+
+- opening project directories with `docker run`
+- editing files inside Kubernetes workloads through ephemeral debug containers
+- backing the `nvim_pod` helper from the dotfiles repo
+
+It is not meant to replace a full local workstation Neovim setup.
