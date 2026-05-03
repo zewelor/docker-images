@@ -24,6 +24,7 @@ COPY config/nvim/ /etc/xdg/nvim/
 
 RUN set -o pipefail && \
     nvim --headless "+Lazy! sync" +qa && \
+    find /usr/local/share/nvim/lazy -type d -name '.git' -exec rm -rf {} + 2>/dev/null || true && \
     nvim --headless +qa && \
     mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/lib/cargo/bin /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/xdg /runtime-root/lib64 && \
     cp -a /usr/bin/nvim /runtime-root/usr/bin/ && \

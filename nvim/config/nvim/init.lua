@@ -64,6 +64,11 @@ require("lazy").setup({
       end,
     },
     {
+      "nvim-mini/mini.surround",
+      version = "*",
+      opts = {},
+    },
+    {
       "nvim-mini/mini.pairs",
       event = "InsertEnter",
       opts = {},
