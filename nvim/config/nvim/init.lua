@@ -64,6 +64,11 @@ require("lazy").setup({
       end,
     },
     {
+      "nvim-mini/mini.pairs",
+      event = "InsertEnter",
+      opts = {},
+    },
+    {
       "folke/which-key.nvim",
       event = "VeryLazy",
       opts = {
@@ -84,6 +89,35 @@ require("lazy").setup({
       keys = {
         { "<leader>e", "<cmd>Neotree toggle filesystem left<cr>", desc = "Toggle file tree" },
       },
+    },
+    {
+      "lewis6991/gitsigns.nvim",
+      event = { "BufReadPre", "BufNewFile" },
+      opts = {},
+    },
+    {
+      "nvim-telescope/telescope.nvim",
+      tag = "0.1.8",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+      },
+      keys = {
+        { "<leader>ff", function() require("telescope.builtin").find_files() end, desc = "Find files" },
+        { "<leader>fg", function() require("telescope.builtin").live_grep() end, desc = "Live grep" },
+      },
+      opts = function()
+        if vim.fn.executable("fdfind") ~= 1 then
+          return {}
+        end
+
+        return {
+          pickers = {
+            find_files = {
+              find_command = { "fdfind", "--type", "f", "--hidden", "--exclude", ".git" },
+            },
+          },
+        }
+      end,
     },
   },
 })

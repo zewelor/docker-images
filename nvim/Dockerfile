@@ -14,8 +14,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
+    fd-find \
     git \
-    neovim && \
+    neovim \
+    ripgrep && \
     rm -rf /var/lib/apt/lists/*
 
 COPY config/nvim/ /etc/xdg/nvim/
@@ -23,15 +25,20 @@ COPY config/nvim/ /etc/xdg/nvim/
 RUN set -o pipefail && \
     nvim --headless "+Lazy! sync" +qa && \
     nvim --headless +qa && \
-    mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/xdg /runtime-root/lib64 && \
+    mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/lib/cargo/bin /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/xdg /runtime-root/lib64 && \
     cp -a /usr/bin/nvim /runtime-root/usr/bin/ && \
+    cp -a /usr/bin/git /runtime-root/usr/bin/ && \
+    cp -a /usr/bin/rg /runtime-root/usr/bin/ && \
+    cp -a /usr/bin/fdfind /runtime-root/usr/bin/ && \
+    cp -a /usr/lib/cargo/bin/fd /runtime-root/usr/lib/cargo/bin/ && \
+    cp -a /usr/lib/git-core /runtime-root/usr/lib/ && \
     cp -a /usr/libexec/neovim /runtime-root/usr/libexec/ && \
     cp -a /usr/lib/nvim /runtime-root/usr/lib/ && \
     cp -a /usr/share/nvim /runtime-root/usr/share/ && \
     cp -a /usr/local/share/nvim /runtime-root/usr/local/share/ && \
     cp -a /etc/xdg/nvim /runtime-root/etc/xdg/ && \
     : > /tmp/runtime-libs && \
-    { printf '%s\n' /usr/bin/nvim /usr/libexec/neovim/*; find /usr/lib/nvim -type f -name '*.so'; find /usr/local/share/nvim -type f -name '*.so'; } \
+    { printf '%s\n' /usr/bin/nvim /usr/bin/git /usr/bin/rg /usr/bin/fdfind /usr/lib/cargo/bin/fd /usr/libexec/neovim/* /usr/lib/git-core/*; find /usr/lib/nvim -type f -name '*.so'; find /usr/local/share/nvim -type f -name '*.so'; } \
       | while read -r target; do \
         [ -n "$target" ] || continue; \
         ldd "$target" 2>/dev/null | awk '/=> \// {print $3} /^\// {print $1}' >> /tmp/runtime-libs; \
