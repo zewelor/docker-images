@@ -36,10 +36,14 @@ Runtime defaults:
 
 - `nvim`
 - `git`
+- `ssh`
+- `ssh-keyscan`
 - `ripgrep`
 - `fd-find`
 
 `fd-find` is wired so Telescope can use `fdfind` in Debian-based images.
+
+For Git-over-SSH, mount SSH material under `/tmp/.ssh` or run the container with a user that can read your mounted private keys.
 
 ## Included plugins
 
@@ -99,13 +103,14 @@ This keeps runtime behavior deterministic and avoids network access from product
 
 ## Size trade-offs
 
-The image is currently about `140 MiB`.
+The image is currently about `151 MiB` on a local `amd64` build.
 
 Largest runtime chunks:
 
 - `/usr/lib/git-core` - about `25 MiB`
 - `/usr/share/nvim` - about `24 MiB`
-- `/usr/local/share/nvim` - about `9.7 MiB`
+- `/usr/share/terminfo` - about `12 MiB`
+- `/usr/local/share/nvim` - about `9.9 MiB`
 
 The obvious candidate for future trimming is `git-core`, but it stays for now.
 
@@ -118,10 +123,13 @@ Why:
 
 For this image, predictable Git behavior is worth more than saving a few extra megabytes.
 
+The image still contains about `2.7 MiB` of manpages and about `380 KiB` of docs from the Debian Hardened base image. Those files are in a lower base layer, so deleting them in a later `RUN rm -rf ...` step would not materially shrink the final pulled image.
+
 ## Maintenance notes
 
 - `telescope.nvim` is pinned to `0.1.8` because Debian Trixie currently ships Neovim `0.10.4`, while newer Telescope releases require Neovim `0.11+`
 - Git templates are copied into the runtime image so `git init` works without template warnings
+- SSH support intentionally includes `ssh` and `ssh-keyscan`, but not `scp`, `sftp`, or `ssh-keygen`, because Git-over-SSH is the target use case
 - if you add new runtime tools, remember to copy both the executable and any required symlink targets or shared libraries into the runtime stage
 
 ## Primary use case

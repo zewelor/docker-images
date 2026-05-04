@@ -17,6 +17,7 @@ RUN apt-get update && \
     fd-find \
     git \
     neovim \
+    openssh-client \
     ripgrep && \
     rm -rf /var/lib/apt/lists/*
 
@@ -26,21 +27,26 @@ RUN set -o pipefail && \
     nvim --headless "+Lazy! sync" +qa && \
     find /usr/local/share/nvim/lazy -type d -name '.git' -prune -exec rm -rf {} + && \
     nvim --headless +qa && \
-    mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/lib/cargo/bin /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/xdg /runtime-root/lib64 && \
+    mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/lib/cargo/bin /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/ssh/ssh_config.d /runtime-root/etc/xdg /runtime-root/lib64 && \
     cp -a /usr/bin/nvim /runtime-root/usr/bin/ && \
     cp -a /usr/bin/git /runtime-root/usr/bin/ && \
     cp -a /usr/bin/rg /runtime-root/usr/bin/ && \
     cp -a /usr/bin/fdfind /runtime-root/usr/bin/ && \
+    cp -a /usr/bin/ssh /runtime-root/usr/bin/ && \
+    cp -a /usr/bin/ssh-keyscan /runtime-root/usr/bin/ && \
     cp -a /usr/lib/cargo/bin/fd /runtime-root/usr/lib/cargo/bin/ && \
     cp -a /usr/lib/git-core /runtime-root/usr/lib/ && \
     cp -a /usr/libexec/neovim /runtime-root/usr/libexec/ && \
     cp -a /usr/lib/nvim /runtime-root/usr/lib/ && \
     cp -a /usr/share/git-core /runtime-root/usr/share/ && \
     cp -a /usr/share/nvim /runtime-root/usr/share/ && \
+    cp -a /usr/share/terminfo /runtime-root/usr/share/ && \
     cp -a /usr/local/share/nvim /runtime-root/usr/local/share/ && \
+    cp -a /etc/ssh/ssh_config /runtime-root/etc/ssh/ && \
+    cp -a /etc/ssh/ssh_config.d /runtime-root/etc/ssh/ && \
     cp -a /etc/xdg/nvim /runtime-root/etc/xdg/ && \
     : > /tmp/runtime-libs && \
-    { printf '%s\n' /usr/bin/nvim /usr/bin/git /usr/bin/rg /usr/bin/fdfind /usr/lib/cargo/bin/fd /usr/libexec/neovim/* /usr/lib/git-core/*; find /usr/lib/nvim -type f -name '*.so'; find /usr/local/share/nvim -type f -name '*.so'; } \
+    { printf '%s\n' /usr/bin/nvim /usr/bin/git /usr/bin/rg /usr/bin/fdfind /usr/bin/ssh /usr/bin/ssh-keyscan /usr/lib/cargo/bin/fd /usr/libexec/neovim/* /usr/lib/git-core/*; find /usr/lib/nvim -type f -name '*.so'; find /usr/local/share/nvim -type f -name '*.so'; } \
       | while read -r target; do \
         [ -n "$target" ] || continue; \
         ldd "$target" 2>/dev/null | awk '/=> \// {print $3} /^\// {print $1}' >> /tmp/runtime-libs; \
@@ -74,6 +80,7 @@ COPY --from=build /runtime-root/usr/libexec/ /usr/libexec/
 COPY --from=build /runtime-root/usr/lib/nvim/ /usr/lib/nvim/
 COPY --from=build /runtime-root/usr/share/ /usr/share/
 COPY --from=build /runtime-root/usr/local/share/ /usr/local/share/
+COPY --from=build /runtime-root/etc/ssh/ /etc/ssh/
 COPY --from=build /runtime-root/etc/xdg/ /etc/xdg/
 COPY --from=build /runtime-root/lib/ /lib/
 COPY --from=build /runtime-root/lib64/ /lib64/
