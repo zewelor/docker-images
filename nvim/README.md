@@ -28,9 +28,39 @@ Runtime defaults:
 - working directory: `/workspace`
 - user: `65532:65532`
 - `HOME=/tmp`
+- `~/.gitconfig` is populated at container start from `GIT_USER_NAME` / `GIT_USER_EMAIL`, or from baked image defaults when those env vars are not set
 - `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=*`
 - `GIT_PAGER=cat`
 - `XDG_CONFIG_HOME=/etc/xdg`
+
+Published image defaults:
+
+- `user.name=zewelor`
+- `user.email=zewelor@gmail.com`
+
+Git identity examples:
+
+```bash
+docker run --rm -it \
+  -e GIT_USER_NAME="zewelor" \
+  -e GIT_USER_EMAIL="you@example.com" \
+  -v "$PWD":/workspace \
+  ghcr.io/zewelor/nvim
+```
+
+If you build locally with `just` in `nvim/`, the build automatically bakes in defaults from your current `git config user.name` and `git config user.email`. You can still override them later with runtime env vars.
+
+Plain `docker build` can do the same explicitly:
+
+```bash
+docker build \
+  --build-arg DEFAULT_GIT_USER_NAME="$(git config --get user.name)" \
+  --build-arg DEFAULT_GIT_USER_EMAIL="$(git config --get user.email)" \
+  -t ghcr.io/zewelor/nvim \
+  ./nvim
+```
+
+GitHub Actions bakes the published image defaults directly during `nvim` builds. The workflow does not try to resolve the email dynamically from GitHub, because that data is not reliably exposed there.
 
 ## Included tools
 

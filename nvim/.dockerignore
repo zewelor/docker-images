@@ -1,6 +1,7 @@
 *
 !Dockerfile
 !.dockerignore
+!docker-entrypoint.sh
 !config/
 !config/nvim/
 !config/nvim/**

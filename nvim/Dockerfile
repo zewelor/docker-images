@@ -64,7 +64,12 @@ FROM dhi.io/debian-base:${DHI_DEBIAN_TAG} AS runtime
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG DEFAULT_GIT_USER_NAME=
+ARG DEFAULT_GIT_USER_EMAIL=
+
 ENV HOME=/tmp \
+    DEFAULT_GIT_USER_NAME=${DEFAULT_GIT_USER_NAME} \
+    DEFAULT_GIT_USER_EMAIL=${DEFAULT_GIT_USER_EMAIL} \
     GIT_CONFIG_COUNT=1 \
     GIT_CONFIG_KEY_0=safe.directory \
     GIT_CONFIG_VALUE_0=* \
@@ -85,8 +90,9 @@ COPY --from=build /runtime-root/etc/xdg/ /etc/xdg/
 COPY --from=build /runtime-root/lib/ /lib/
 COPY --from=build /runtime-root/lib64/ /lib64/
 COPY --from=build /runtime-root/usr/lib/ /usr/lib/
+COPY --chmod=0755 docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 
 USER 65532:65532
 
-ENTRYPOINT ["nvim"]
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
 CMD ["."]

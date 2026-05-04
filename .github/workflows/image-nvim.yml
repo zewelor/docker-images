@@ -24,5 +24,7 @@ jobs:
       image_name: nvim
       debian_tag: trixie-debian13
       release_tag: '13'
+      default_git_user_name: zewelor
+      default_git_user_email: zewelor@gmail.com
       publish: ${{ github.ref == 'refs/heads/main' }}
     secrets: inherit
