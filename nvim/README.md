@@ -28,6 +28,8 @@ Runtime defaults:
 - working directory: `/workspace`
 - user: `65532:65532`
 - `HOME=/tmp`
+- `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=*`
+- `GIT_PAGER=cat`
 - `XDG_CONFIG_HOME=/etc/xdg`
 
 ## Included tools
@@ -43,9 +45,11 @@ Runtime defaults:
 
 - `catppuccin/nvim` - colorscheme (`latte`, transparent background)
 - `nvim-mini/mini.icons` - icon provider for UI plugins
+- `nvim-mini/mini.align` - lightweight interactive alignment for structured text
 - `nvim-mini/mini.pairs` - lightweight autopairs
 - `nvim-mini/mini.surround` - lightweight surround editing
 - `folke/which-key.nvim` - keybinding hints
+- `folke/ts-comments.nvim` - tree-sitter aware comment support for built-in `gc`
 - `nvim-neo-tree/neo-tree.nvim` - file tree
 - `lewis6991/gitsigns.nvim` - Git gutter signs and hunk actions
 - `nvim-telescope/telescope.nvim` - file and text search
@@ -55,8 +59,20 @@ Runtime defaults:
 Useful mappings:
 
 - `<leader>e` - toggle Neo-tree
+- `<leader>o` - focus Neo-tree
 - `<leader>ff` - find files
 - `<leader>fg` - live grep
+- `<leader>?` - show global keymaps with which-key
+- `ga` - align text with `mini.align`
+- `gsa` / `gsd` / `gsr` - add, delete, or replace surroundings
+- `gsf` / `gsh` / `gsn` - find, highlight, or adjust surround scope
+- `<leader>hs` - stage hunk or selected lines
+- `<leader>hS` - stage current buffer
+- `<C-_>` - toggle comments with built-in `gc`
+
+Small built-in QoL defaults:
+
+- extra horizontal context via `sidescrolloff=8`
 
 ## Intentionally excluded
 

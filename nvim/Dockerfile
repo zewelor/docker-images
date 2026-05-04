@@ -59,6 +59,10 @@ FROM dhi.io/debian-base:${DHI_DEBIAN_TAG} AS runtime
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV HOME=/tmp \
+    GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0=safe.directory \
+    GIT_CONFIG_VALUE_0=* \
+    GIT_PAGER=cat \
     XDG_CONFIG_HOME=/etc/xdg \
     XDG_DATA_HOME=/usr/local/share \
     XDG_STATE_HOME=/tmp/nvim-state

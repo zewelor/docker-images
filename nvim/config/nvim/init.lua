@@ -17,6 +17,7 @@ vim.opt.splitbelow = true
 vim.opt.updatetime = 200
 vim.opt.timeoutlen = 300
 vim.opt.scrolloff = 4
+vim.opt.sidescrolloff = 8
 
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
@@ -74,13 +75,23 @@ require("lazy").setup({
       opts = {},
     },
     {
+      "nvim-mini/mini.align",
+      opts = {},
+    },
+    {
       "folke/which-key.nvim",
       event = "VeryLazy",
       opts = {
+        expand = 1,
         delay = function(ctx)
           return ctx.plugin and 0 or 300
         end,
       },
+    },
+    {
+      "folke/ts-comments.nvim",
+      lazy = false,
+      opts = {},
     },
     {
       "nvim-neo-tree/neo-tree.nvim",
@@ -93,6 +104,7 @@ require("lazy").setup({
       },
       keys = {
         { "<leader>e", "<cmd>Neotree toggle filesystem left<cr>", desc = "Toggle file tree" },
+        { "<leader>o", "<cmd>Neotree focus filesystem left<cr>", desc = "Focus file tree" },
       },
     },
     {
@@ -126,3 +138,69 @@ require("lazy").setup({
     },
   },
 })
+
+local map = vim.keymap.set
+
+local function stage_selected_hunk()
+  local gitsigns = require("gitsigns")
+  local start_line = vim.fn.line("v")
+  local end_line = vim.fn.line(".")
+
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+
+  gitsigns.stage_hunk({ start_line, end_line })
+end
+
+map("n", "<leader>?", function()
+  require("which-key").show({ global = true })
+end, { desc = "Global keymaps" })
+
+map("n", "<leader>hs", function()
+  require("gitsigns").stage_hunk()
+end, { desc = "Stage hunk" })
+
+map("x", "<leader>hs", stage_selected_hunk, { desc = "Stage selected lines" })
+
+map("n", "<leader>hS", function()
+  require("gitsigns").stage_buffer()
+end, { desc = "Stage buffer" })
+
+map("n", "gsa", function()
+  require("mini.surround")
+  MiniSurround.add()
+end, { desc = "Add surrounding" })
+
+map("x", "gsa", function()
+  require("mini.surround")
+  MiniSurround.add("visual")
+end, { desc = "Add surrounding for selection" })
+
+map("n", "gsd", function()
+  require("mini.surround")
+  MiniSurround.delete()
+end, { desc = "Delete surrounding" })
+
+map("n", "gsr", function()
+  require("mini.surround")
+  MiniSurround.replace()
+end, { desc = "Replace surrounding" })
+
+map("n", "gsf", function()
+  require("mini.surround")
+  MiniSurround.find()
+end, { desc = "Find surrounding" })
+
+map("n", "gsh", function()
+  require("mini.surround")
+  MiniSurround.highlight()
+end, { desc = "Highlight surrounding" })
+
+map("n", "gsn", function()
+  require("mini.surround")
+  MiniSurround.update_n_lines()
+end, { desc = "Update surround n_lines" })
+
+map("n", "<C-_>", "gcc", { remap = true, silent = true, desc = "Toggle comment line" })
+map("x", "<C-_>", "gc", { remap = true, silent = true, desc = "Toggle comment selection" })
