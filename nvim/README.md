@@ -73,6 +73,7 @@ Useful mappings:
 Small built-in QoL defaults:
 
 - extra horizontal context via `sidescrolloff=8`
+- Neo-tree shows dotfiles, gitignored files, and ignored files instead of collapsing them into `N hidden`
 
 ## Intentionally excluded
 

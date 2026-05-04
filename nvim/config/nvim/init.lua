@@ -97,6 +97,18 @@ require("lazy").setup({
       "nvim-neo-tree/neo-tree.nvim",
       branch = "v3.x",
       lazy = false,
+      opts = {
+        log_to_file = false,
+        filesystem = {
+          filtered_items = {
+            hide_dotfiles = false,
+            hide_gitignored = false,
+            hide_hidden = false,
+            hide_ignored = false,
+            show_hidden_count = false,
+          },
+        },
+      },
       dependencies = {
         "nvim-lua/plenary.nvim",
         "MunifTanjim/nui.nvim",
