@@ -7,6 +7,8 @@ on:
         description: Previous stable Alpine version
         value: ${{ jobs.resolve.outputs.alpine_version }}
 
+permissions: {}
+
 jobs:
   resolve:
     name: Discover previous stable Alpine

@@ -20,6 +20,8 @@ on:
   schedule:
     - cron: '0 0 * * 0'
 
+permissions: {}
+
 env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
@@ -36,6 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         image_name: [rsync, tftp, sqlite3, nut]
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}
@@ -46,6 +51,9 @@ jobs:
 
   ruby:
     name: Build ruby
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/reusable-ruby-image.yml
     with:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
@@ -54,6 +62,9 @@ jobs:
 
   debian:
     name: Build nvim
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/reusable-debian-image.yml
     with:
       image_name: nvim

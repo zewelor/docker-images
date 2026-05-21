@@ -36,6 +36,8 @@ on:
         default: true
         type: boolean
 
+permissions: {}
+
 env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
@@ -43,6 +45,9 @@ jobs:
   build:
     name: Build ${{ inputs.image_name }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: checkout code
         uses: actions/checkout@v6
