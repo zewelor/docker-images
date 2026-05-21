@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name: [rsync, tftp, sqlite3]
+        image_name: [rsync, tftp, sqlite3, nut]
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}

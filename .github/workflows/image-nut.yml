@@ -1,0 +1,32 @@
+name: Build nut
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'nut/**'
+      - '!**/*.md'
+      - '!**/justfile'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths:
+      - 'nut/**'
+      - '!**/*.md'
+      - '!**/justfile'
+
+jobs:
+  alpine_version:
+    name: Resolve Alpine version
+    uses: ./.github/workflows/reusable-alpine-version.yml
+
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: alpine_version
+    uses: ./.github/workflows/reusable-alpine-image.yml
+    with:
+      image_name: nut
+      alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
+    secrets: inherit

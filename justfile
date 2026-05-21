@@ -1,7 +1,7 @@
 import "common.just"
 
 # Build all images
-build-all: build-sqlite3 build-rsync build-tftp build-ruby build-nvim
+build-all: build-sqlite3 build-rsync build-tftp build-ruby build-nvim build-nut
 
 # Individual builds
 build-sqlite3:
@@ -18,3 +18,6 @@ build-ruby:
 
 build-nvim:
     just nvim/
+
+build-nut:
+    just nut/
