@@ -35,11 +35,6 @@ on:
         required: false
         default: true
         type: boolean
-      test_command:
-        description: Command to execute to smoke-test the built image
-        required: false
-        default: ''
-        type: string
 
 
 permissions: {}
@@ -82,20 +77,8 @@ jobs:
           max_attempts: 3
           command: |
             echo "${{ secrets.DOCKER_DHI_TOKEN }}" | docker login dhi.io -u "${{ secrets.DOCKER_DHI_USERNAME }}" --password-stdin
-      - name: Resolve test command
-        id: resolve
-        run: |
-          CMD="${{ inputs.test_command }}"
-          if [ -z "$CMD" ]; then
-            case "${{ inputs.image_name }}" in
-              nvim)
-                CMD="docker run --rm test-image:latest --version"
-                ;;
-            esac
-          fi
-          echo "test_command=$CMD" >> "$GITHUB_OUTPUT"
       - name: Build local image for smoke testing
-        if: ${{ steps.resolve.outputs.test_command != '' }}
+        if: ${{ hashFiles(format('{0}/smoke-test.sh', inputs.image_name)) != '' }}
         uses: docker/build-push-action@v7
         with:
           pull: true
@@ -109,8 +92,10 @@ jobs:
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
       - name: Run smoke test
-        if: ${{ steps.resolve.outputs.test_command != '' }}
-        run: ${{ steps.resolve.outputs.test_command }}
+        if: ${{ hashFiles(format('{0}/smoke-test.sh', inputs.image_name)) != '' }}
+        run: |
+          chmod +x "./${{ inputs.image_name }}/smoke-test.sh"
+          "./${{ inputs.image_name }}/smoke-test.sh"
       - name: Login to GitHub Container Registry
         if: ${{ inputs.publish }}
 

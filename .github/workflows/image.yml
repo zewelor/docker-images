@@ -9,14 +9,10 @@ on:
         default: true
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - '.github/workflows/**'
   push:
     branches:
       - main
       - 'renovate/**'
-    paths:
-      - '.github/workflows/**'
   schedule:
     - cron: '0 0 * * 0'
 
@@ -26,18 +22,94 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
+  detect:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      alpine_images: ${{ steps.set-matrix.outputs.alpine_images }}
+      build_ruby: ${{ steps.set-matrix.outputs.build_ruby }}
+      build_debian: ${{ steps.set-matrix.outputs.build_debian }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Detect path changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            workflows:
+              - '.github/workflows/**'
+            rsync:
+              - 'rsync/**'
+              - '!rsync/**/*.md'
+              - '!rsync/**/justfile'
+            tftp:
+              - 'tftp/**'
+              - '!tftp/**/*.md'
+              - '!tftp/**/justfile'
+            sqlite3:
+              - 'sqlite3/**'
+              - '!sqlite3/**/*.md'
+              - '!sqlite3/**/justfile'
+            nut:
+              - 'nut/**'
+              - '!nut/**/*.md'
+              - '!nut/**/justfile'
+            ruby:
+              - 'ruby/**'
+              - '!ruby/**/*.md'
+              - '!ruby/**/justfile'
+            nvim:
+              - 'nvim/**'
+              - '!nvim/**/*.md'
+              - '!nvim/**/justfile'
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          BUILD_ALL="false"
+          if [ "${{ github.event_name }}" = "schedule" ] || \
+             [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             [ "${{ steps.filter.outputs.workflows }}" = "true" ]; then
+            BUILD_ALL="true"
+          fi
+          
+          IMAGES=()
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.rsync }}" = "true" ]; then IMAGES+=("rsync"); fi
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.tftp }}" = "true" ]; then IMAGES+=("tftp"); fi
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.sqlite3 }}" = "true" ]; then IMAGES+=("sqlite3"); fi
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.nut }}" = "true" ]; then IMAGES+=("nut"); fi
+          
+          JSON_IMAGES=$(jq --compact-output --null-input '$ARGS.positional' --args "${IMAGES[@]}")
+          echo "alpine_images=$JSON_IMAGES" >> "$GITHUB_OUTPUT"
+          
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.ruby }}" = "true" ]; then
+            echo "build_ruby=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_ruby=false" >> "$GITHUB_OUTPUT"
+          fi
+          
+          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.nvim }}" = "true" ]; then
+            echo "build_debian=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_debian=false" >> "$GITHUB_OUTPUT"
+          fi
+
   alpine_version:
     name: Resolve Alpine version
+    needs: detect
+    if: ${{ fromJSON(needs.detect.outputs.alpine_images)[0] != null }}
     uses: ./.github/workflows/reusable-alpine-version.yml
 
   alpine:
     name: Build ${{ matrix.image_name }}
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    needs: alpine_version
+    if: ${{ fromJSON(needs.detect.outputs.alpine_images)[0] != null && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [detect, alpine_version]
     strategy:
       fail-fast: false
       matrix:
-        image_name: [rsync, tftp, sqlite3, nut]
+        image_name: ${{ fromJSON(needs.detect.outputs.alpine_images) }}
     permissions:
       contents: read
       packages: write
@@ -51,6 +123,8 @@ jobs:
 
   ruby:
     name: Build ruby
+    if: ${{ needs.detect.outputs.build_ruby == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: detect
     permissions:
       contents: read
       packages: write
@@ -62,6 +136,8 @@ jobs:
 
   debian:
     name: Build nvim
+    if: ${{ needs.detect.outputs.build_debian == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: detect
     permissions:
       contents: read
       packages: write
@@ -73,4 +149,3 @@ jobs:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
     secrets: inherit
-

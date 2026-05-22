@@ -9,7 +9,8 @@ on:
         type: string
       alpine_version:
         description: Resolved Alpine version to build against
-        required: true
+        required: false
+        default: ''
         type: string
       publish:
         description: Push image to registry
@@ -21,11 +22,6 @@ on:
         required: false
         default: true
         type: boolean
-      test_command:
-        description: Command to execute to smoke-test the built image
-        required: false
-        default: ''
-        type: string
 
 
 permissions: {}
@@ -46,6 +42,22 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v6
+      - name: Resolve Alpine version
+        id: alpine_version
+        run: |
+          VERSION="${{ inputs.alpine_version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(
+              curl -fsSL \
+                --retry 5 \
+                --retry-all-errors \
+                --retry-delay 2 \
+                --connect-timeout 10 \
+                https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/latest-releases.yaml |
+              awk '/^  branch: v[0-9]+\.[0-9]+$/ { gsub(/^  branch: v/, "", $0); split($0, v, "."); printf "%s.%d\n", v[1], v[2] - 1; exit }' || echo "3.22"
+            )"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
@@ -58,7 +70,7 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ inputs.alpine_version }}
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ steps.alpine_version.outputs.version }}
           flavor: |
             latest=true
       - name: Set up QEMU
@@ -72,39 +84,23 @@ jobs:
           max_attempts: 3
           command: |
             echo "${{ secrets.DOCKER_DHI_TOKEN }}" | docker login dhi.io -u "${{ secrets.DOCKER_DHI_USERNAME }}" --password-stdin
-      - name: Resolve test command
-        id: resolve
-        run: |
-          CMD="${{ inputs.test_command }}"
-          if [ -z "$CMD" ]; then
-            case "${{ inputs.image_name }}" in
-              rsync|sqlite3)
-                CMD="docker run --rm test-image:latest --version"
-                ;;
-              tftp)
-                CMD="docker run --rm test-image:latest -V"
-                ;;
-              nut)
-                CMD="docker run --rm --entrypoint /usr/bin/upsc test-image:latest -V"
-                ;;
-            esac
-          fi
-          echo "test_command=$CMD" >> "$GITHUB_OUTPUT"
       - name: Build local image for smoke testing
-        if: ${{ steps.resolve.outputs.test_command != '' }}
+        if: ${{ hashFiles(format('{0}/smoke-test.sh', inputs.image_name)) != '' }}
         uses: docker/build-push-action@v7
         with:
           pull: true
           load: true
           context: ${{ inputs.image_name }}/
           build-args: |
-            ALPINE_VERSION=${{ inputs.alpine_version }}
+            ALPINE_VERSION=${{ steps.alpine_version.outputs.version }}
           tags: test-image:latest
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
       - name: Run smoke test
-        if: ${{ steps.resolve.outputs.test_command != '' }}
-        run: ${{ steps.resolve.outputs.test_command }}
+        if: ${{ hashFiles(format('{0}/smoke-test.sh', inputs.image_name)) != '' }}
+        run: |
+          chmod +x "./${{ inputs.image_name }}/smoke-test.sh"
+          "./${{ inputs.image_name }}/smoke-test.sh"
       - name: Login to GitHub Container Registry
         if: ${{ inputs.publish }}
 
@@ -121,7 +117,7 @@ jobs:
           push: ${{ inputs.publish }}
           context: ${{ inputs.image_name }}/
           build-args: |
-            ALPINE_VERSION=${{ inputs.alpine_version }}
+            ALPINE_VERSION=${{ steps.alpine_version.outputs.version }}
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
           platforms: linux/amd64,linux/arm64
