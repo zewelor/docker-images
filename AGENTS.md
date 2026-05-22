@@ -100,7 +100,6 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 
 ### CI
 - `.github/workflows/image.yml` - Central dynamic paths-filtering orchestrator. Automatically detects modified directories (excluding markdown and `justfiles`) on push or pull request, and dynamically constructs a GHA matrix build to test and build ONLY the modified applications. Also handles full rebuilds on schedules, manual dispatches, or workflow file changes.
-- `.github/workflows/reusable-alpine-version.yml` - Shared Alpine version lookup.
 - `.github/workflows/reusable-alpine-image.yml` - Shared Alpine build logic; automatically discovers and runs directory-level smoke tests.
 - `.github/workflows/reusable-ruby-image.yml` - Shared Ruby build logic.
 - `.github/workflows/reusable-debian-image.yml` - Shared Debian Hardened build logic; automatically discovers and runs directory-level smoke tests.

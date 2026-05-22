@@ -91,16 +91,10 @@ jobs:
           echo "build_ruby=$BUILD_RUBY" >> "$GITHUB_OUTPUT"
           echo "build_debian=$BUILD_DEBIAN" >> "$GITHUB_OUTPUT"
 
-  alpine_version:
-    name: Resolve Alpine version
-    needs: detect
-    if: ${{ fromJSON(needs.detect.outputs.alpine_images)[0] != null }}
-    uses: ./.github/workflows/reusable-alpine-version.yml
-
   alpine:
     name: Build ${{ matrix.image_name }}
     if: ${{ fromJSON(needs.detect.outputs.alpine_images)[0] != null && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-    needs: [detect, alpine_version]
+    needs: detect
     strategy:
       fail-fast: false
       matrix:
@@ -111,7 +105,6 @@ jobs:
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}
-      alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
     secrets: inherit

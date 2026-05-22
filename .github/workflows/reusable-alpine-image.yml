@@ -7,11 +7,6 @@ on:
         description: Image directory name
         required: true
         type: string
-      alpine_version:
-        description: Resolved Alpine version to build against
-        required: false
-        default: ''
-        type: string
       publish:
         description: Push image to registry
         required: false
@@ -42,20 +37,12 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v6
-      - name: Resolve Alpine version
+      - name: Resolve Alpine version from Dockerfile
         id: alpine_version
         run: |
-          VERSION="${{ inputs.alpine_version }}"
+          VERSION=$(awk -F= '/^ARG ALPINE_VERSION/ {gsub(/[" ]/, "", $2); print $2}' "${{ inputs.image_name }}/Dockerfile")
           if [ -z "$VERSION" ]; then
-            VERSION="$(
-              curl -fsSL \
-                --retry 5 \
-                --retry-all-errors \
-                --retry-delay 2 \
-                --connect-timeout 10 \
-                https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/latest-releases.yaml |
-              awk '/^  branch: v[0-9]+\.[0-9]+$/ { gsub(/^  branch: v/, "", $0); split($0, v, "."); printf "%s.%d\n", v[1], v[2] - 1; exit }' || echo "3.22"
-            )"
+            VERSION="3.22"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: hadolint/hadolint-action@v3.3.0

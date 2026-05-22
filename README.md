@@ -16,23 +16,19 @@ Because the repo prefers freshness over reproducibility, local builds and CI alw
 
 ## CI behavior
 
-CI uses thin path-based workflows to decide what should run and reusable workflows to keep the actual build logic DRY.
+CI uses a modernized, zero-overhead dynamic orchestration pattern designed for developer velocity, offline safety, and decoupled testing.
 
-- `.github/workflows/image.yml` runs a full rebuild for all images on `workflow_dispatch`, weekly `schedule`, and changes under `.github/workflows/**`.
-- `.github/workflows/image-ruby.yml` runs only the Ruby build when `ruby/**` changes, while ignoring Markdown-only and `justfile`-only changes.
-- `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, and `.github/workflows/image-tftp.yml` run only the matching Alpine image when that image directory changes, while ignoring Markdown-only and `justfile`-only changes.
-- `.github/workflows/reusable-alpine-version.yml` resolves the previous stable Alpine version once per workflow and exposes it as an output.
-- Alpine build workflows first call the reusable Alpine version workflow and then pass that output into the reusable Alpine image build workflow.
-- The Alpine lookup command is intentionally kept in one place in CI and mirrored in `common.just` for local builds.
-- `.github/workflows/reusable-alpine-image.yml` builds one Alpine image for a pre-resolved Alpine version.
-- `.github/workflows/reusable-ruby-image.yml` contains the shared Ruby build, tag, cache, and push logic.
-
-This split exists because GitHub Actions `paths` filtering works at the workflow level, not per job. The small trigger workflows are intentional; they keep change detection simple without duplicating the heavy build steps.
+- `.github/workflows/image.yml` - The central orchestrator. It uses `dorny/paths-filter` to dynamically detect modified image directories (ignoring Markdown and `justfile` edits) on pushes or pull requests. It automatically constructs a GHA matrix to build and test *only* the affected images. It also manages full multi-platform rebuilds on weekly schedules, manual dispatches, or workflow file changes.
+- `.github/workflows/reusable-alpine-image.yml` - The shared build, tag, and publish logic for Alpine-based images. It dynamically parses the `ARG ALPINE_VERSION` directly from the application's `Dockerfile` as the source of truth, and runs the application's localized smoke-test suite.
+- `.github/workflows/reusable-debian-image.yml` - The shared build, tag, and publish logic for Debian-based hardened images, running localized smoke-test suites.
+- `.github/workflows/reusable-ruby-image.yml` - The shared build, tag, and publish logic for Ruby-based images.
 
 ## Adding or changing images
 
-- New Alpine image: add the image directory, add the image name to the matrix in `.github/workflows/image.yml`, and create a thin trigger workflow similar to `.github/workflows/image-rsync.yml`.
-- New Ruby-like or otherwise special image: create a dedicated trigger workflow and either reuse an existing reusable workflow or add a new one if the build pattern is genuinely different.
-- Keep trigger workflows small: they should mainly define `on: ... paths:` and call a reusable workflow.
-- Preserve the doc ignores in path-based workflows so Markdown-only or `justfile`-only edits do not rebuild images.
-- If a CI change affects `.github/workflows/**`, let the full rebuild exercise everything.
+- **Standard Alpine/Debian-based Images**: Require **absolutely zero GitHub Actions changes**! To add a new image:
+  1. Create the image directory (e.g. `my-app/`).
+  2. Add a `Dockerfile` and a `.dockerignore` to keep the build context minimal.
+  3. Write a `smoke-test.sh` script (using `#!/usr/bin/env bash` and `set -euo pipefail`) that targets `test-image:latest` and verifies basic runtime execution (e.g., executing the binary with `--version` flags). Make sure to make it executable locally.
+  4. The central orchestrator will automatically discover your folder, resolve the correct reusable workflow, compile the multiarch image, and run your `smoke-test.sh` on the fly.
+- **Specialized/Base Images**: If adding a custom base or non-standard runtime pattern (such as Ruby), register its specific build routing rules under the central orchestrator (`image.yml`) matrix or job definitions.
+
