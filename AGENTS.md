@@ -1,124 +1,111 @@
 # Docker Images Monorepo
 
-## Goals
+This repo builds multiarch Docker images for `ghcr.io/zewelor`. Optimize for simple, obvious maintenance over clever automation or maximum image-size reduction.
 
-### Security
-- Minimal attack surface via multi-stage builds where practical
-- No secrets baked into images
-- Users can run with `--user` flag if needed (images default to root for flexibility)
+## What Matters Here
 
-### Simplicity
-- Prefer maintainability over smaller image size
-- One clear pattern per use case (multi-stage vs single-stage)
-- Document trade-offs in comments
+- Keep each image easy to understand from its own directory.
+- Keep build contexts minimal with a `.dockerignore` next to every `Dockerfile`.
+- Do not bake secrets into images.
+- Prefer fresh upstream packages and base images over pinned reproducibility.
+- Preserve local-first workflows: `just` should build images locally, and smoke tests should be executable outside CI.
+- Do not make CI routing dynamic. Each image has a thin workflow file; workflow changes are handled by the full rebuild workflow.
 
-### Maintainability
-- DRY: common.just for shared build logic
-- CI adds OCI labels automatically
-- Self-explanatory Dockerfile comments
-- Keep Docker build contexts minimal with a `.dockerignore` next to every `Dockerfile`
+## Image Defaults
 
-## Developer Thoughts & Architectural Decisions
+- Images are multiarch: `linux/amd64` and `linux/arm64`.
+- Alpine-based images use Docker Hardened Images from `dhi.io/alpine-base`.
+- Debian hardened images use `dhi.io/debian-base`; currently `nvim` uses Debian 13.
+- Ruby uses the upstream `ruby:<version>-slim` base plus a distroless variant.
+- Package versions are intentionally not pinned unless a specific breakage requires it.
+- Base image tags live in the Dockerfiles or workflow inputs. Do not reintroduce central version parsing unless there is a clear operational need.
+- Images may default to root when that is the practical contract. For example, `tftp` uses root so it can bind `69/udp`.
 
-This repository is built around several core developer priorities designed to maximize developer velocity, security, and repository health:
+## Local Builds
 
-### 1. Explicit Per-Image Workflows
-- **Goal**: Adding, removing, or refactoring a Docker image must keep CI routing obvious.
-- **Why**: Dynamic discovery and path filtering made the central workflow harder to reason about and easier to break before jobs started.
-- **How**: Each image owns a thin `.github/workflows/image-<name>.yml` caller with its own path filters and reusable build/publish call.
+Use the repo's `just` entrypoints:
 
-### 2. Decoupled, Local-First Testing
-- **Goal**: Tests must be decoupled from CI runner environments and easily runnable locally.
-- **Why**: Relying solely on GHA to run tests makes troubleshooting slow and frustrating. Hardcoding test commands in YAML files violates the DRY principle.
-- **How**: Every application includes an executable `smoke-test.sh` script. The reusable workflow builds the local test tag and executes this script before publishing. Developers can run the exact same smoke tests locally after building the same tag.
-
-### 3. Supply Chain Security & Attestations
-- **Goal**: All published container images must be securely built and cryptographically verifiable.
-- **Why**: Supply chain attacks are a critical risk. Users must be able to verify that the container images published actually originated from this repository.
-- **How**: Enforced DHI base images for minimal attack surface, eliminated secrets baking, and integrated **GitHub Actions Build Provenance (Attestations)** to cryptographically sign images during GHA publishing.
-
-### 4. Offline Safety & Local Robustness
-- **Goal**: Local development commands (e.g. `just`) must never fail or hang due to network connectivity issues.
-- **Why**: Developers frequently work in flaky network or offline environments.
-- **How**: All dynamic online lookups (such as Alpine and Ruby version checks in `common.just`) are protected by robust fallback values, allowing offline execution without errors.
-
-## What
-Multiarch Docker images (amd64/arm64) for ghcr.io/zewelor. All Alpine-based images use dhi.io base images.
-
-## How
-
-### Build
 ```bash
-cd <image-dir> && just    # build single image
-just build-all            # build all images from root
+cd <image-dir> && just
+just build-all
 ```
 
-### Base images (dhi.io)
+Image-local `justfile`s should stay thin and import `../common.just`. Put shared local build behavior in `common.just`.
 
-Our monorepo adopts Docker Hardened Images (DHI) as primary base images. Key operational rules when developing with DHI images, in accordance with the [Official DHI Migration Guide](https://hub.docker.com/hardened-images/catalog/dhi/build/guides#migrate-to-a-docker-hardened-image):
+## Dockerfile Style
 
-* **Image Variants & Multi-Stage Builds**:
-  * **Build-time (`-dev` suffix)**: Run as `root`, contain a shell, and include package managers (`apk` or `apt`). Use these *only* in build stages to compile binaries and install packages.
-  * **Runtime (no suffix)**: Run as the `nonroot` user, contain no package manager, and **no shell**. Copy only the necessary runtime closure (binaries, dynamic libraries) into this clean stage.
-* **Non-Root & Permissions**:
-  * Ensure files/directories accessed by the application at runtime have appropriate ownership (e.g. `chown -R nonroot` or equivalent permissions) so the `nonroot` user can read/write them.
-* **Privileged Port Bindings**:
-  * Because runtime containers lack root privileges, they **cannot bind to privileged ports below 1024** (e.g., standard TFTP on port 69). Always configure runtime apps to listen on non-privileged ports (1025 or higher) inside the container, and map them to standard ports externally.
-* **Shell-less Runtime & Debugging**:
-  * Since production containers lack a shell, traditional `docker exec -it <container> sh` will not work. Use **`docker debug`** to attach an ephemeral troubleshooting environment with interactive shells and tools.
-* **CA Certificates**:
-  * Root CA certificates are pre-installed in DHI base images. Do not add redundant steps to install certs.
+- Use multi-stage builds when they keep the runtime small without making maintenance painful.
+- For DHI images, install packages only in `-dev` build stages when using a minimal runtime stage.
+- Copy only the runtime files and shared libraries needed by the final image.
+- Use a simpler larger runtime only when dependency copying becomes too fragile or too costly to maintain.
+- Add comments only for decisions that are not obvious from the Dockerfile itself.
+- Keep `hadolint` ignores narrow and close to the reason.
 
+Current patterns:
 
-### Image patterns
+- Alpine minimal runtime: `sqlite3`, `tftp`, `rsync`, `nut`.
+- Debian hardened runtime: `nvim`.
+- Ruby slim plus distroless: `ruby`.
 
-**Multi-stage (simple binaries):** sqlite3, tftp
-- Build stage: install packages in `-dev`
-- Live stage: copy only needed binaries/libs to minimal
-- See `sqlite3/Dockerfile`, `tftp/Dockerfile`
+## Build Contexts
 
-**Single-stage -dev (complex deps):** rsync, postgres-init
-- When package has many shared lib dependencies (OpenSSL, etc.)
-- Simpler to maintain, larger image
-- See `rsync/Dockerfile`
+Every image directory must have a `.dockerignore`.
 
-**Non-Alpine:** ruby (uses ruby:slim)
+Default to whitelist-style contexts:
 
-**Debian Hardened:** nvim (uses `dhi.io/debian-base`)
-- Build stage: `dhi.io/debian-base:<version>-dev`
-- Runtime stage: `dhi.io/debian-base:<version>`
-- Use for interactive Debian-based tools where copying only the exact runtime closure is not worth the complexity.
+```dockerignore
+*
+!Dockerfile
+!.dockerignore
+```
 
-### Build context
-- Every image directory must contain a `.dockerignore` adjacent to its `Dockerfile`.
-- Default to a whitelist-style `.dockerignore` that includes only files needed for the build context.
-- For the current images, the build context should stay limited to `Dockerfile` and `.dockerignore`; do not send `justfile`, `README.md`, or other repo files unless the Dockerfile actually needs them.
-- If a new image needs local files during `docker build`, explicitly opt those files into `.dockerignore` instead of widening the whole context.
+Only opt in extra files when the Dockerfile actually copies them, such as `nut/entrypoint.sh` or `nvim/config/`.
 
-### Catatonit
-Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) or init containers (postgres-init).
+## Smoke Tests
 
-### CI
-- `.github/workflows/image-<name>.yml` - Thin per-image workflow. Watches that image directory, excludes markdown and `justfile` edits, then calls the appropriate reusable workflow.
-- `.github/workflows/image.yml` - Static full rebuild workflow for `workflow_dispatch`, weekly `schedule`, and workflow-file changes.
-- `.github/workflows/reusable-alpine-image.yml` - Shared Alpine lint/smoke/build/publish/attestation logic.
-- `.github/workflows/reusable-ruby-image.yml` - Shared Ruby lint/smoke/build/publish/attestation logic.
-- `.github/workflows/reusable-debian-image.yml` - Shared Debian Hardened lint/smoke/build/publish/attestation logic.
+Every image has an executable `smoke-test.sh` in its image directory.
 
-### Smoke Testing
-- Every application must decouple its smoke test assertions from the GHA workflow files and place them in an executable local `smoke-test.sh` script (e.g. `sqlite3/smoke-test.sh`).
-- Smoke test scripts must:
-  - Be standard executable shell scripts (using `#!/usr/bin/env bash` and `set -euo pipefail`).
-  - Require explicit image tag arguments and fail if the tag is not provided.
-  - Perform simple validation (e.g. verifying binary execution and outputting `--version`).
-- Reusable workflows run `smoke-test.sh` explicitly before publishing.
+Rules:
 
-#### CI maintenance rules
-- Ensure each per-image workflow excludes documentation (`*.md`) and the image-local `justfile` to avoid wasteful container builds.
-- Do not hardcode runtime test assertions inside GHA workflow YAML files. Keep assertions inside the application's local `smoke-test.sh`; reusable workflow YAML should only build the expected local test tag and pass it to the script.
+- Use `#!/usr/bin/env bash` and `set -euo pipefail`.
+- Require explicit image tag arguments. Fail if the tag is missing.
+- Keep runtime assertions in the script, not in workflow YAML.
+- Keep the assertion small: run the binary, print `--version` or equivalent, and fail on non-zero exit.
 
-#### Adding a new image
-- Create a `.dockerignore` next to `<name>/Dockerfile` keeping the build context minimal.
-- Write a `smoke-test.sh` script inside the new image directory to assert basic runtime functionality (e.g. running binary with `--version` flags).
-- Add a thin `.github/workflows/image-<name>.yml` workflow with directory-specific paths and a reusable workflow call.
-- **Specialized Base Images (Non-Alpine/Debian)**: If adding a non-Alpine image (such as standard ruby or custom debian toolchain), keep its special smoke setup in the appropriate reusable workflow.
+Reusable workflows build the local test image, call the smoke script with the test tag, and only publish after smoke passes.
+
+## CI Model
+
+CI is intentionally explicit:
+
+- `.github/workflows/image-<name>.yml` watches only that image directory, excluding Markdown and the image-local `justfile`, then calls the right reusable workflow.
+- `.github/workflows/image.yml` is the full rebuild workflow. It runs on manual dispatch, weekly schedule, and workflow-file changes.
+- Workflow-file changes must not trigger every per-image workflow. They are covered by `image.yml`.
+- Reusable workflows own lint, smoke, build, publish, retrying registry login, OCI labels, and build attestations.
+- Published images must include GitHub build provenance attestations.
+
+When adding a standard image:
+
+1. Create `<name>/Dockerfile`.
+2. Create `<name>/.dockerignore` with a minimal whitelist.
+3. Create executable `<name>/smoke-test.sh` with explicit image tag arguments.
+4. Add `<name>/justfile` importing `../common.just`.
+5. Add a thin `.github/workflows/image-<name>.yml` caller.
+6. Add the image to `.github/workflows/image.yml` if it should be included in full rebuilds.
+
+For non-standard image families, add or extend a reusable workflow only when the existing Alpine, Debian, or Ruby reusable workflow does not fit.
+
+## Registry And Publishing
+
+- DHI and GHCR logins should be retried; transient registry failures are expected.
+- Do not publish before smoke tests pass.
+- Main branch pushes, manual dispatches, and scheduled full rebuilds publish images.
+- Pull requests from forks should not run publishing jobs with inherited secrets.
+
+## Maintenance Bias
+
+- Prefer a small amount of explicit YAML over dynamic discovery.
+- Prefer one clear pattern per image family over a generic abstraction that hides behavior.
+- Avoid broad refactors when touching one image.
+- If a change affects shared workflow behavior, run `actionlint` before pushing.
+- If CI fails, inspect the exact job logs before changing code. Registry timeouts can be transient; workflow syntax and smoke failures are not.
