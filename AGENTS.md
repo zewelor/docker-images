@@ -30,8 +30,21 @@ just build-all            # build all images from root
 ```
 
 ### Base images (dhi.io)
-- `-dev` suffix: has apk (for installing packages)
-- no suffix: minimal, no apk
+
+Our monorepo adopts Docker Hardened Images (DHI) as primary base images. Key operational rules when developing with DHI images, in accordance with the [Official DHI Migration Guide](https://hub.docker.com/hardened-images/catalog/dhi/build/guides#migrate-to-a-docker-hardened-image):
+
+* **Image Variants & Multi-Stage Builds**:
+  * **Build-time (`-dev` suffix)**: Run as `root`, contain a shell, and include package managers (`apk` or `apt`). Use these *only* in build stages to compile binaries and install packages.
+  * **Runtime (no suffix)**: Run as the `nonroot` user, contain no package manager, and **no shell**. Copy only the necessary runtime closure (binaries, dynamic libraries) into this clean stage.
+* **Non-Root & Permissions**:
+  * Ensure files/directories accessed by the application at runtime have appropriate ownership (e.g. `chown -R nonroot` or equivalent permissions) so the `nonroot` user can read/write them.
+* **Privileged Port Bindings**:
+  * Because runtime containers lack root privileges, they **cannot bind to privileged ports below 1024** (e.g., standard TFTP on port 69). Always configure runtime apps to listen on non-privileged ports (1025 or higher) inside the container, and map them to standard ports externally.
+* **Shell-less Runtime & Debugging**:
+  * Since production containers lack a shell, traditional `docker exec -it <container> sh` will not work. Use **`docker debug`** to attach an ephemeral troubleshooting environment with interactive shells and tools.
+* **CA Certificates**:
+  * Root CA certificates are pre-installed in DHI base images. Do not add redundant steps to install certs.
+
 
 ### Image patterns
 

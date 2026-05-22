@@ -34,4 +34,5 @@ jobs:
       image_name: nut
       alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
       publish: ${{ github.ref == 'refs/heads/main' }}
+      test_command: 'docker run --rm --entrypoint /usr/bin/upsc test-image:latest -V'
     secrets: inherit

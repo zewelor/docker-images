@@ -49,6 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: checkout code
         uses: actions/checkout@v6
@@ -77,6 +78,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build local image for smoke testing
+        uses: docker/build-push-action@v7
+        with:
+          pull: true
+          load: true
+          context: ruby/
+          target: base
+          build-args: |
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+          tags: test-image-ruby-base:latest
+          cache-from: ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
+          cache-to: type=gha,mode=max,scope=ruby
+
+      - name: Run ruby-base smoke test
+        run: docker run --rm test-image-ruby-base:latest /usr/local/bin/ruby --version
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v7
@@ -92,6 +108,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
+      - name: Generate build attestation
+        if: ${{ inputs.publish }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/ruby
+          subject-digest: ${{ steps.docker_build.outputs.digest }}
+          push-to-registry: true
 
   ruby-distroless:
     name: Build ruby-distroless
@@ -100,6 +123,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: checkout code
         uses: actions/checkout@v6
@@ -130,6 +154,23 @@ jobs:
           docker pull ruby:${{ needs.latest-ruby.outputs.version }}-slim
           DISTROLESS_DEBIAN_VERSION=$(docker run --rm ruby:${{ needs.latest-ruby.outputs.version }}-slim sh -c '. /etc/os-release && echo $VERSION_ID')
           echo "distroless_debian_version=${DISTROLESS_DEBIAN_VERSION}" >> $GITHUB_OUTPUT
+      - name: Build local image for smoke testing
+        uses: docker/build-push-action@v7
+        with:
+          pull: true
+          load: true
+          context: ruby/
+          target: distroless
+          build-args: |
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            DISTROLESS_DEBIAN_VERSION=${{ steps.fetch-debian-version.outputs.distroless_debian_version }}
+          tags: test-image-ruby-distroless:latest
+          cache-from: |
+            ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
+            ${{ inputs.use_cache && 'type=gha,scope=ruby-distroless' || '' }}
+          cache-to: type=gha,mode=max,scope=ruby-distroless
+      - name: Run ruby-distroless smoke test
+        run: docker run --rm test-image-ruby-distroless:latest /usr/local/bin/ruby --version
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v7
@@ -148,3 +189,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
+      - name: Generate build attestation
+        if: ${{ inputs.publish }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/ruby
+          subject-digest: ${{ steps.docker_build.outputs.digest }}
+          push-to-registry: true

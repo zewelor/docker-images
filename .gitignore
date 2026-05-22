@@ -1,1 +1,5 @@
 /.env
+/.tmp-tftp/
+/.act/
+*.log
+.DS_Store

@@ -10,7 +10,7 @@ This repo intentionally optimizes for simplicity.
 - Ruby images track the latest stable Ruby release.
 - Images default to root unless a specific image already has a stronger opinion, such as the distroless Ruby variant.
 - Alpine runtime images aim to avoid shipping `apk`; `sqlite3`, `tftp`, and `rsync` follow that pattern.
-- `tftp` intentionally runs as non-root in its runtime image, listening on `1069/udp` by default to avoid privileged ports inside the container.
+- `tftp` runs as `USER 0` (root) in its runtime image to bind to the standard `69/udp` port, dropping privileges internally after binding.
 
 Because the repo prefers freshness over reproducibility, local builds and CI always pull the latest matching base image tags before building.
 
