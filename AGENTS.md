@@ -75,30 +75,27 @@ Our monorepo adopts Docker Hardened Images (DHI) as primary base images. Key ope
 Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) or init containers (postgres-init).
 
 ### CI
-- `.github/workflows/image.yml` - full rebuild for all images on workflow changes, manual dispatch, and schedule.
-- `.github/workflows/image-ruby.yml` - Ruby-only trigger workflow.
-- `.github/workflows/image-rsync.yml`, `.github/workflows/image-sqlite3.yml`, `.github/workflows/image-tftp.yml` - per-image Alpine trigger workflows.
-- `.github/workflows/image-nvim.yml` - per-image Debian trigger workflow.
-- `.github/workflows/reusable-alpine-version.yml` - shared Alpine version lookup.
-- `.github/workflows/reusable-alpine-image.yml` - shared Alpine build logic for one image; callers resolve Alpine once and pass the version in.
-- `.github/workflows/reusable-ruby-image.yml` - shared Ruby build logic.
-- `.github/workflows/reusable-debian-image.yml` - shared Debian Hardened build logic.
+- `.github/workflows/image.yml` - Central dynamic paths-filtering orchestrator. Automatically detects modified directories (excluding markdown and `justfiles`) on push or pull request, and dynamically constructs a GHA matrix build to test and build ONLY the modified applications. Also handles full rebuilds on schedules, manual dispatches, or workflow file changes.
+- `.github/workflows/reusable-alpine-version.yml` - Shared Alpine version lookup.
+- `.github/workflows/reusable-alpine-image.yml` - Shared Alpine build logic; automatically discovers and runs directory-level smoke tests.
+- `.github/workflows/reusable-ruby-image.yml` - Shared Ruby build logic.
+- `.github/workflows/reusable-debian-image.yml` - Shared Debian Hardened build logic; automatically discovers and runs directory-level smoke tests.
+
+### Smoke Testing
+- Every application must decouple its smoke test assertions from the GHA workflow files and place them in an executable local `smoke-test.sh` script (e.g. `sqlite3/smoke-test.sh`).
+- Smoke test scripts must:
+  - Be standard executable shell scripts (using `#!/usr/bin/env bash` and `set -euo pipefail`).
+  - Target `test-image:latest` (or `test-image-ruby-base:latest`, etc. for specialized builds).
+  - Perform simple validation (e.g. verifying binary execution and outputting `--version`).
+- Reusable workflows dynamically detect the presence of `smoke-test.sh` inside the application's directory using `hashFiles`, make it executable, and run it locally during the CI process.
 
 #### CI maintenance rules
-- Keep path-based trigger workflows thin. They should mostly define `paths` filters and call a reusable workflow.
-- Use `paths` and `paths-ignore` style exclusions to avoid rebuilds for docs-only changes where practical.
-- For per-image workflows, ignore Markdown-only and `justfile`-only changes unless those files start affecting build behavior.
-- If a change affects only one image directory, only that image's workflow should run.
-- If a change affects `.github/workflows/**`, rebuild all images so workflow changes are exercised immediately.
+- Ensure the central paths filter in `.github/workflows/image.yml` excludes documentation (`*.md`) and local helper recipes (`**/justfile`) to avoid wasteful container builds.
+- Do not hardcode testing commands inside GHA workflow YAML files. Keep all test assertions inside the application's local `smoke-test.sh`.
 
 #### Adding a new image
-- If it follows the Alpine pattern, reuse `.github/workflows/reusable-alpine-image.yml`.
-- Add the image name to the matrix in `.github/workflows/image.yml`.
-- Create a thin trigger workflow named `.github/workflows/image-<name>.yml` modeled after the existing per-image workflows.
-- Include path filters for `<name>/**` and exclude Markdown and `justfile` changes unless that image needs different rules.
-- Add a `.dockerignore` next to `<name>/Dockerfile`. Treat it as required, and keep the context to the smallest explicit whitelist that still lets the image build.
+- Create a `.dockerignore` next to `<name>/Dockerfile` keeping the build context minimal.
+- Write a `smoke-test.sh` script inside the new image directory to assert basic runtime functionality.
+- Register the new image path-filtering rule and matrix inclusion logic in `.github/workflows/image.yml` under the `detect` job.
+- If it follows the Alpine pattern, the dynamic matrix will automatically route it to `reusable-alpine-image.yml`.
 
-#### Changing CI
-- Prefer changing reusable workflows before copying steps into trigger workflows.
-- Keep full rebuild logic centralized in `.github/workflows/image.yml`.
-- After CI changes, validate YAML locally and check the pushed GitHub Actions runs to confirm the intended workflows triggered.
