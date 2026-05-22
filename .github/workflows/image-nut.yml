@@ -13,8 +13,6 @@ on:
       - 'nut/**'
       - '!nut/**/*.md'
       - '!nut/justfile'
-      - '.github/workflows/image-nut.yml'
-      - '.github/workflows/reusable-alpine-image.yml'
   push:
     branches:
       - main

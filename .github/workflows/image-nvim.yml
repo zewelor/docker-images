@@ -13,8 +13,6 @@ on:
       - 'nvim/**'
       - '!nvim/**/*.md'
       - '!nvim/justfile'
-      - '.github/workflows/image-nvim.yml'
-      - '.github/workflows/reusable-debian-image.yml'
   push:
     branches:
       - main

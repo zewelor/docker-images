@@ -13,8 +13,6 @@ on:
       - 'sqlite3/**'
       - '!sqlite3/**/*.md'
       - '!sqlite3/justfile'
-      - '.github/workflows/image-sqlite3.yml'
-      - '.github/workflows/reusable-alpine-image.yml'
   push:
     branches:
       - main

@@ -13,8 +13,6 @@ on:
       - 'ruby/**'
       - '!ruby/**/*.md'
       - '!ruby/justfile'
-      - '.github/workflows/image-ruby.yml'
-      - '.github/workflows/reusable-ruby-image.yml'
   push:
     branches:
       - main
