@@ -95,7 +95,8 @@ Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) o
 
 #### Adding a new image
 - Create a `.dockerignore` next to `<name>/Dockerfile` keeping the build context minimal.
-- Write a `smoke-test.sh` script inside the new image directory to assert basic runtime functionality.
-- Register the new image path-filtering rule and matrix inclusion logic in `.github/workflows/image.yml` under the `detect` job.
-- If it follows the Alpine pattern, the dynamic matrix will automatically route it to `reusable-alpine-image.yml`.
+- Write a `smoke-test.sh` script inside the new image directory to assert basic runtime functionality (e.g. running binary with `--version` flags).
+- **Standard Alpine-based Images**: Require **absolutely zero GitHub Actions changes**! The central orchestrator dynamically discovers the new directory containing the `Dockerfile`, passes it to the `reusable-alpine-image.yml` matrix, compiles it, and executes its local `smoke-test.sh` on the fly.
+- **Specialized Base Images (Non-Alpine/Debian)**: If adding a non-Alpine image (such as standard ruby or custom debian toolchain), register its specific build routing rules inside `.github/workflows/image.yml` under the matrix/job definitions.
+
 
