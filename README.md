@@ -19,7 +19,7 @@ Because the repo prefers freshness over reproducibility, local builds and CI alw
 CI uses a modernized, zero-overhead dynamic orchestration pattern designed for developer velocity, offline safety, and decoupled testing.
 
 - `.github/workflows/image.yml` - The central orchestrator. It uses `dorny/paths-filter` to dynamically detect modified image directories (ignoring Markdown and `justfile` edits) on pushes or pull requests. It automatically constructs a GHA matrix to build and test *only* the affected images. It also manages full multi-platform rebuilds on weekly schedules, manual dispatches, or workflow file changes.
-- `.github/workflows/reusable-alpine-image.yml` - The shared build, tag, and publish logic for Alpine-based images. It dynamically parses the `ARG ALPINE_VERSION` directly from the application's `Dockerfile` as the source of truth, and runs the application's localized smoke-test suite.
+- `.github/workflows/reusable-alpine-image.yml` - The shared build, tag, and publish logic for Alpine-based images, running the application's localized smoke-test suite. Relying directly on the Dockerfile defaults, it publishes the image to the registry with latest and sha tags.
 - `.github/workflows/reusable-debian-image.yml` - The shared build, tag, and publish logic for Debian-based hardened images, running localized smoke-test suites.
 - `.github/workflows/reusable-ruby-image.yml` - The shared build, tag, and publish logic for Ruby-based images.
 

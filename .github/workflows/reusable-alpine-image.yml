@@ -37,14 +37,6 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v6
-      - name: Resolve Alpine version from Dockerfile
-        id: alpine_version
-        run: |
-          VERSION=$(awk -F= '/^ARG ALPINE_VERSION/ {gsub(/[" ]/, "", $2); print $2}' "${{ inputs.image_name }}/Dockerfile")
-          if [ -z "$VERSION" ]; then
-            VERSION="3.22"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
@@ -57,7 +49,6 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=alpine-${{ steps.alpine_version.outputs.version }}
           flavor: |
             latest=true
       - name: Set up QEMU
@@ -78,8 +69,6 @@ jobs:
           pull: true
           load: true
           context: ${{ inputs.image_name }}/
-          build-args: |
-            ALPINE_VERSION=${{ steps.alpine_version.outputs.version }}
           tags: test-image:latest
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
@@ -103,8 +92,6 @@ jobs:
           pull: true
           push: ${{ inputs.publish }}
           context: ${{ inputs.image_name }}/
-          build-args: |
-            ALPINE_VERSION=${{ steps.alpine_version.outputs.version }}
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
           platforms: linux/amd64,linux/arm64
