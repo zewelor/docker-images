@@ -38,36 +38,18 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
+          list-files: 'json'
           filters: |
             workflows:
               - '.github/workflows/**'
-            rsync:
-              - 'rsync/**'
-              - '!rsync/**/*.md'
-              - '!rsync/**/justfile'
-            tftp:
-              - 'tftp/**'
-              - '!tftp/**/*.md'
-              - '!tftp/**/justfile'
-            sqlite3:
-              - 'sqlite3/**'
-              - '!sqlite3/**/*.md'
-              - '!sqlite3/**/justfile'
-            nut:
-              - 'nut/**'
-              - '!nut/**/*.md'
-              - '!nut/**/justfile'
-            ruby:
-              - 'ruby/**'
-              - '!ruby/**/*.md'
-              - '!ruby/**/justfile'
-            nvim:
-              - 'nvim/**'
-              - '!nvim/**/*.md'
-              - '!nvim/**/justfile'
+            src:
+              - '**'
       - name: Generate matrix
         id: set-matrix
         run: |
+          # Discover all application directories containing a Dockerfile
+          ALL_APPS=$(find . -maxdepth 2 -name Dockerfile | cut -d'/' -f2 | sort -u)
+          
           BUILD_ALL="false"
           if [ "${{ github.event_name }}" = "schedule" ] || \
              [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
@@ -75,26 +57,39 @@ jobs:
             BUILD_ALL="true"
           fi
           
-          IMAGES=()
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.rsync }}" = "true" ]; then IMAGES+=("rsync"); fi
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.tftp }}" = "true" ]; then IMAGES+=("tftp"); fi
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.sqlite3 }}" = "true" ]; then IMAGES+=("sqlite3"); fi
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.nut }}" = "true" ]; then IMAGES+=("nut"); fi
+          if [ "$BUILD_ALL" = "true" ]; then
+            CHANGED_APPS="$ALL_APPS"
+          else
+            CHANGED_FILES='${{ steps.filter.outputs.src_files }}'
+            RAW_CHANGED_DIRS=$(echo "$CHANGED_FILES" | jq -r '.[] | select(test("\\.md$|justfile$") | not) | split("/")[0]' | sort -u)
+            
+            # Intersection of RAW_CHANGED_DIRS and ALL_APPS to filter out non-app directories
+            CHANGED_APPS=""
+            for app in $ALL_APPS; do
+              if echo "$RAW_CHANGED_DIRS" | grep -q -x "$app"; then
+                CHANGED_APPS="$CHANGED_APPS $app"
+              fi
+            done
+          fi
           
-          JSON_IMAGES=$(jq --compact-output --null-input '$ARGS.positional' --args "${IMAGES[@]}")
+          ALPINE_IMAGES=()
+          BUILD_RUBY="false"
+          BUILD_DEBIAN="false"
+          
+          for app in $CHANGED_APPS; do
+            if [ "$app" = "ruby" ]; then
+              BUILD_RUBY="true"
+            elif [ "$app" = "nvim" ]; then
+              BUILD_DEBIAN="true"
+            else
+              ALPINE_IMAGES+=("$app")
+            fi
+          done
+          
+          JSON_IMAGES=$(jq --compact-output --null-input '$ARGS.positional' --args "${ALPINE_IMAGES[@]}")
           echo "alpine_images=$JSON_IMAGES" >> "$GITHUB_OUTPUT"
-          
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.ruby }}" = "true" ]; then
-            echo "build_ruby=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "build_ruby=false" >> "$GITHUB_OUTPUT"
-          fi
-          
-          if [ "$BUILD_ALL" = "true" ] || [ "${{ steps.filter.outputs.nvim }}" = "true" ]; then
-            echo "build_debian=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "build_debian=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "build_ruby=$BUILD_RUBY" >> "$GITHUB_OUTPUT"
+          echo "build_debian=$BUILD_DEBIAN" >> "$GITHUB_OUTPUT"
 
   alpine_version:
     name: Resolve Alpine version
