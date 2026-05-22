@@ -4,104 +4,42 @@ on:
   workflow_dispatch:
     inputs:
       use_cache:
-        description: 'Use Docker cache'
+        description: Use Docker cache
         type: boolean
         default: true
   pull_request:
     types: [opened, synchronize, reopened]
+    paths: &workflow_paths
+      - '.github/workflows/**'
   push:
     branches:
       - main
       - 'renovate/**'
+    paths: *workflow_paths
   schedule:
     - cron: '0 0 * * 0'
 
-permissions: {}
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
 
 env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
-  detect:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      alpine_images: ${{ steps.set-matrix.outputs.alpine_images }}
-      build_ruby: ${{ steps.set-matrix.outputs.build_ruby }}
-      build_debian: ${{ steps.set-matrix.outputs.build_debian }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Detect path changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          list-files: 'json'
-          filters: |
-            workflows:
-              - '.github/workflows/**'
-            src:
-              - '**'
-      - name: Generate matrix
-        id: set-matrix
-        run: |
-          # Discover all application directories containing a Dockerfile
-          ALL_APPS=$(find . -maxdepth 2 -name Dockerfile | cut -d'/' -f2 | sort -u)
-          
-          BUILD_ALL="false"
-          if [ "${{ github.event_name }}" = "schedule" ] || \
-             [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
-             [ "${{ steps.filter.outputs.workflows }}" = "true" ]; then
-            BUILD_ALL="true"
-          fi
-          
-          if [ "$BUILD_ALL" = "true" ]; then
-            CHANGED_APPS="$ALL_APPS"
-          else
-            CHANGED_FILES='${{ steps.filter.outputs.src_files }}'
-            RAW_CHANGED_DIRS=$(echo "$CHANGED_FILES" | jq -r '.[] | select(test("\\.md$|justfile$") | not) | split("/")[0]' | sort -u)
-            
-            # Intersection of RAW_CHANGED_DIRS and ALL_APPS to filter out non-app directories
-            CHANGED_APPS=""
-            for app in $ALL_APPS; do
-              if echo "$RAW_CHANGED_DIRS" | grep -q -x "$app"; then
-                CHANGED_APPS="$CHANGED_APPS $app"
-              fi
-            done
-          fi
-          
-          ALPINE_IMAGES=()
-          BUILD_RUBY="false"
-          BUILD_DEBIAN="false"
-          
-          for app in $CHANGED_APPS; do
-            if [ "$app" = "ruby" ]; then
-              BUILD_RUBY="true"
-            elif [ "$app" = "nvim" ]; then
-              BUILD_DEBIAN="true"
-            else
-              ALPINE_IMAGES+=("$app")
-            fi
-          done
-          
-          JSON_IMAGES=$(jq --compact-output --null-input '$ARGS.positional' --args "${ALPINE_IMAGES[@]}")
-          echo "alpine_images=$JSON_IMAGES" >> "$GITHUB_OUTPUT"
-          echo "build_ruby=$BUILD_RUBY" >> "$GITHUB_OUTPUT"
-          echo "build_debian=$BUILD_DEBIAN" >> "$GITHUB_OUTPUT"
-
   alpine:
     name: Build ${{ matrix.image_name }}
-    if: ${{ fromJSON(needs.detect.outputs.alpine_images)[0] != null && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-    needs: detect
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     strategy:
       fail-fast: false
       matrix:
-        image_name: ${{ fromJSON(needs.detect.outputs.alpine_images) }}
-    permissions:
-      contents: read
-      packages: write
+        image_name:
+          - nut
+          - rsync
+          - sqlite3
+          - tftp
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}
@@ -111,11 +49,7 @@ jobs:
 
   ruby:
     name: Build ruby
-    if: ${{ needs.detect.outputs.build_ruby == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-    needs: detect
-    permissions:
-      contents: read
-      packages: write
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     uses: ./.github/workflows/reusable-ruby-image.yml
     with:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
@@ -124,11 +58,7 @@ jobs:
 
   debian:
     name: Build nvim
-    if: ${{ needs.detect.outputs.build_debian == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-    needs: detect
-    permissions:
-      contents: read
-      packages: write
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     uses: ./.github/workflows/reusable-debian-image.yml
     with:
       image_name: nvim

@@ -1,0 +1,41 @@
+name: Build nvim image
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_cache:
+        description: Use Docker cache
+        type: boolean
+        default: true
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: &image_paths
+      - 'nvim/**'
+      - '!nvim/**/*.md'
+      - '!nvim/justfile'
+      - '.github/workflows/image-nvim.yml'
+      - '.github/workflows/reusable-debian-image.yml'
+  push:
+    branches:
+      - main
+      - 'renovate/**'
+    paths: *image_paths
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build and publish
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    uses: ./.github/workflows/reusable-debian-image.yml
+    with:
+      image_name: nvim
+      debian_tag: trixie-debian13
+      release_tag: '13'
+      publish: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+    secrets: inherit

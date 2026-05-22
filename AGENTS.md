@@ -22,15 +22,15 @@
 
 This repository is built around several core developer priorities designed to maximize developer velocity, security, and repository health:
 
-### 1. Developer Velocity & Zero GHA Overhead
-- **Goal**: Adding, removing, or refactoring a Docker image must require **zero** GitHub Actions YAML changes.
-- **Why**: Maintaining separate workflow YAMLs for every application leads to maintenance fatigue, drift, and massive code duplication.
-- **How**: We implemented dynamic directory discovery (`find`) and paths-filtering (`dorny/paths-filter`) to automatically build a matrix of only the modified applications. Developers only need to focus on their application directories.
+### 1. Explicit Per-Image Workflows
+- **Goal**: Adding, removing, or refactoring a Docker image must keep CI routing obvious.
+- **Why**: Dynamic discovery and path filtering made the central workflow harder to reason about and easier to break before jobs started.
+- **How**: Each image owns a thin `.github/workflows/image-<name>.yml` caller with its own path filters and reusable build/publish call.
 
 ### 2. Decoupled, Local-First Testing
 - **Goal**: Tests must be decoupled from CI runner environments and easily runnable locally.
 - **Why**: Relying solely on GHA to run tests makes troubleshooting slow and frustrating. Hardcoding test commands in YAML files violates the DRY principle.
-- **How**: Every application includes an executable `smoke-test.sh` script. GHA dynamically discovers, permissions (`chmod +x`), and executes this script. Developers can run the exact same smoke tests locally.
+- **How**: Every application includes an executable `smoke-test.sh` script. The reusable workflow builds the local test tag and executes this script before publishing. Developers can run the exact same smoke tests locally after building the same tag.
 
 ### 3. Supply Chain Security & Attestations
 - **Goal**: All published container images must be securely built and cryptographically verifiable.
@@ -99,27 +99,26 @@ Our monorepo adopts Docker Hardened Images (DHI) as primary base images. Key ope
 Only for long-running services: tftp, ruby. Not for CLI tools (sqlite3, rsync) or init containers (postgres-init).
 
 ### CI
-- `.github/workflows/image.yml` - Central dynamic paths-filtering orchestrator. Automatically detects modified directories (excluding markdown and `justfiles`) on push or pull request, and dynamically constructs a GHA matrix build to test and build ONLY the modified applications. Also handles full rebuilds on schedules, manual dispatches, or workflow file changes.
-- `.github/workflows/reusable-alpine-image.yml` - Shared Alpine build logic; automatically discovers and runs directory-level smoke tests.
-- `.github/workflows/reusable-ruby-image.yml` - Shared Ruby build logic.
-- `.github/workflows/reusable-debian-image.yml` - Shared Debian Hardened build logic; automatically discovers and runs directory-level smoke tests.
+- `.github/workflows/image-<name>.yml` - Thin per-image workflow. Watches that image directory, excludes markdown and `justfile` edits, then calls the appropriate reusable workflow.
+- `.github/workflows/image.yml` - Static full rebuild workflow for `workflow_dispatch`, weekly `schedule`, and workflow-file changes.
+- `.github/workflows/reusable-alpine-image.yml` - Shared Alpine lint/smoke/build/publish/attestation logic.
+- `.github/workflows/reusable-ruby-image.yml` - Shared Ruby lint/smoke/build/publish/attestation logic.
+- `.github/workflows/reusable-debian-image.yml` - Shared Debian Hardened lint/smoke/build/publish/attestation logic.
 
 ### Smoke Testing
 - Every application must decouple its smoke test assertions from the GHA workflow files and place them in an executable local `smoke-test.sh` script (e.g. `sqlite3/smoke-test.sh`).
 - Smoke test scripts must:
   - Be standard executable shell scripts (using `#!/usr/bin/env bash` and `set -euo pipefail`).
-  - Target `test-image:latest` (or `test-image-ruby-base:latest`, etc. for specialized builds).
+  - Require explicit image tag arguments and fail if the tag is not provided.
   - Perform simple validation (e.g. verifying binary execution and outputting `--version`).
-- Reusable workflows dynamically detect the presence of `smoke-test.sh` inside the application's directory using `hashFiles`, make it executable, and run it locally during the CI process.
+- Reusable workflows run `smoke-test.sh` explicitly before publishing.
 
 #### CI maintenance rules
-- Ensure the central paths filter in `.github/workflows/image.yml` excludes documentation (`*.md`) and local helper recipes (`**/justfile`) to avoid wasteful container builds.
-- Do not hardcode testing commands inside GHA workflow YAML files. Keep all test assertions inside the application's local `smoke-test.sh`.
+- Ensure each per-image workflow excludes documentation (`*.md`) and the image-local `justfile` to avoid wasteful container builds.
+- Do not hardcode runtime test assertions inside GHA workflow YAML files. Keep assertions inside the application's local `smoke-test.sh`; reusable workflow YAML should only build the expected local test tag and pass it to the script.
 
 #### Adding a new image
 - Create a `.dockerignore` next to `<name>/Dockerfile` keeping the build context minimal.
 - Write a `smoke-test.sh` script inside the new image directory to assert basic runtime functionality (e.g. running binary with `--version` flags).
-- **Standard Alpine-based Images**: Require **absolutely zero GitHub Actions changes**! The central orchestrator dynamically discovers the new directory containing the `Dockerfile`, passes it to the `reusable-alpine-image.yml` matrix, compiles it, and executes its local `smoke-test.sh` on the fly.
-- **Specialized Base Images (Non-Alpine/Debian)**: If adding a non-Alpine image (such as standard ruby or custom debian toolchain), register its specific build routing rules inside `.github/workflows/image.yml` under the matrix/job definitions.
-
-
+- Add a thin `.github/workflows/image-<name>.yml` workflow with directory-specific paths and a reusable workflow call.
+- **Specialized Base Images (Non-Alpine/Debian)**: If adding a non-Alpine image (such as standard ruby or custom debian toolchain), keep its special smoke setup in the appropriate reusable workflow.

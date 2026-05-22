@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-docker run --rm test-image:latest --version
+image_tag="${1:?Usage: $0 <image-tag>}"
+docker run --rm "${image_tag}" --version

@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-docker run --rm --entrypoint /usr/bin/upsc test-image:latest -V
+image_tag="${1:?Usage: $0 <image-tag>}"
+docker run --rm --entrypoint /usr/bin/upsc "${image_tag}" -V
