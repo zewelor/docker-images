@@ -18,6 +18,30 @@
 - Self-explanatory Dockerfile comments
 - Keep Docker build contexts minimal with a `.dockerignore` next to every `Dockerfile`
 
+## Developer Thoughts & Architectural Decisions
+
+This repository is built around several core developer priorities designed to maximize developer velocity, security, and repository health:
+
+### 1. Developer Velocity & Zero GHA Overhead
+- **Goal**: Adding, removing, or refactoring a Docker image must require **zero** GitHub Actions YAML changes.
+- **Why**: Maintaining separate workflow YAMLs for every application leads to maintenance fatigue, drift, and massive code duplication.
+- **How**: We implemented dynamic directory discovery (`find`) and paths-filtering (`dorny/paths-filter`) to automatically build a matrix of only the modified applications. Developers only need to focus on their application directories.
+
+### 2. Decoupled, Local-First Testing
+- **Goal**: Tests must be decoupled from CI runner environments and easily runnable locally.
+- **Why**: Relying solely on GHA to run tests makes troubleshooting slow and frustrating. Hardcoding test commands in YAML files violates the DRY principle.
+- **How**: Every application includes an executable `smoke-test.sh` script. GHA dynamically discovers, permissions (`chmod +x`), and executes this script. Developers can run the exact same smoke tests locally.
+
+### 3. Supply Chain Security & Attestations
+- **Goal**: All published container images must be securely built and cryptographically verifiable.
+- **Why**: Supply chain attacks are a critical risk. Users must be able to verify that the container images published actually originated from this repository.
+- **How**: Enforced DHI base images for minimal attack surface, eliminated secrets baking, and integrated **GitHub Actions Build Provenance (Attestations)** to cryptographically sign images during GHA publishing.
+
+### 4. Offline Safety & Local Robustness
+- **Goal**: Local development commands (e.g. `just`) must never fail or hang due to network connectivity issues.
+- **Why**: Developers frequently work in flaky network or offline environments.
+- **How**: All dynamic online lookups (such as Alpine and Ruby version checks in `common.just`) are protected by robust fallback values, allowing offline execution without errors.
+
 ## What
 Multiarch Docker images (amd64/arm64) for ghcr.io/zewelor. All Alpine-based images use dhi.io base images.
 
