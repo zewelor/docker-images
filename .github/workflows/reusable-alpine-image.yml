@@ -72,8 +72,26 @@ jobs:
           max_attempts: 3
           command: |
             echo "${{ secrets.DOCKER_DHI_TOKEN }}" | docker login dhi.io -u "${{ secrets.DOCKER_DHI_USERNAME }}" --password-stdin
+      - name: Resolve test command
+        id: resolve
+        run: |
+          CMD="${{ inputs.test_command }}"
+          if [ -z "$CMD" ]; then
+            case "${{ inputs.image_name }}" in
+              rsync|sqlite3)
+                CMD="docker run --rm test-image:latest --version"
+                ;;
+              tftp)
+                CMD="docker run --rm test-image:latest -V"
+                ;;
+              nut)
+                CMD="docker run --rm --entrypoint /usr/bin/upsc test-image:latest -V"
+                ;;
+            esac
+          fi
+          echo "test_command=$CMD" >> "$GITHUB_OUTPUT"
       - name: Build local image for smoke testing
-        if: ${{ inputs.test_command != '' }}
+        if: ${{ steps.resolve.outputs.test_command != '' }}
         uses: docker/build-push-action@v7
         with:
           pull: true
@@ -85,8 +103,8 @@ jobs:
           cache-from: ${{ inputs.use_cache && format('type=gha,scope={0}', inputs.image_name) || '' }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
       - name: Run smoke test
-        if: ${{ inputs.test_command != '' }}
-        run: ${{ inputs.test_command }}
+        if: ${{ steps.resolve.outputs.test_command != '' }}
+        run: ${{ steps.resolve.outputs.test_command }}
       - name: Login to GitHub Container Registry
         if: ${{ inputs.publish }}
 

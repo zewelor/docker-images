@@ -34,5 +34,4 @@ jobs:
       image_name: sqlite3
       alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
       publish: ${{ github.ref == 'refs/heads/main' }}
-      test_command: 'docker run --rm test-image:latest --version'
     secrets: inherit

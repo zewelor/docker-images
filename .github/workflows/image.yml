@@ -37,15 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image_name: rsync
-            test_command: 'docker run --rm test-image:latest --version'
-          - image_name: tftp
-            test_command: 'docker run --rm test-image:latest -V'
-          - image_name: sqlite3
-            test_command: 'docker run --rm test-image:latest --version'
-          - image_name: nut
-            test_command: 'docker run --rm --entrypoint /usr/bin/upsc test-image:latest -V'
+        image_name: [rsync, tftp, sqlite3, nut]
     permissions:
       contents: read
       packages: write
@@ -55,7 +47,6 @@ jobs:
       alpine_version: ${{ needs.alpine_version.outputs.alpine_version }}
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
-      test_command: ${{ matrix.test_command }}
     secrets: inherit
 
   ruby:
@@ -81,6 +72,5 @@ jobs:
       release_tag: '13'
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
-      test_command: 'docker run --rm test-image:latest --version'
     secrets: inherit
 

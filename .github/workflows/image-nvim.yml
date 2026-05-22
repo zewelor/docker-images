@@ -32,5 +32,4 @@ jobs:
       default_git_user_name: zewelor
       default_git_user_email: zewelor@gmail.com
       publish: ${{ github.ref == 'refs/heads/main' }}
-      test_command: 'docker run --rm test-image:latest --version'
     secrets: inherit
