@@ -16,7 +16,8 @@ This repo builds multiarch Docker images for `ghcr.io/zewelor`. Optimize for sim
 - Images are multiarch: `linux/amd64` and `linux/arm64`.
 - Alpine-based images use Docker Hardened Images from `dhi.io/alpine-base`.
 - Debian hardened images use `dhi.io/debian-base`; currently `nvim` uses Debian 13.
-- Ruby uses the upstream `ruby:<version>-slim` base plus a distroless variant.
+- Ruby uses the upstream `ruby:<version>-slim-trixie` base plus a distroless variant on `gcr.io/distroless/base-debian13`.
+- The Ruby `RUBY_VERSION` ARG must pin the Debian codename explicitly (e.g. `-slim-trixie`) so it stays aligned with `DISTROLESS_DEBIAN_VERSION`. A bare `-slim` tag is not acceptable: it currently tracks trixie, but the distroless stage must not be allowed to drift when upstream rolls `-slim` to the next stable release. Keep both values on the same Debian major.
 - Package versions are intentionally not pinned unless a specific breakage requires it.
 - Base image tags live in the Dockerfiles or workflow inputs. Do not reintroduce central version parsing unless there is a clear operational need.
 - Images may default to root when that is the practical contract. For example, `tftp` uses root so it can bind `69/udp`.

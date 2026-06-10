@@ -50,6 +50,7 @@ jobs:
       contents: read
     outputs:
       distroless_debian_version: ${{ steps.fetch-debian-version.outputs.distroless_debian_version }}
+      distroless_codename: ${{ steps.extract-codename.outputs.codename }}
     steps:
       - name: checkout code
         uses: actions/checkout@v6
@@ -57,6 +58,15 @@ jobs:
         with:
           ignore: DL3018
           dockerfile: ruby/Dockerfile
+      - name: Extract distroless codename from Dockerfile
+        id: extract-codename
+        run: |
+          codename=$(awk -F= '/^ARG RUBY_VERSION=/ {gsub(/^.*-slim-/, "", $2); print $2; exit}' ruby/Dockerfile)
+          if [ -z "$codename" ]; then
+            echo "::error::Could not extract codename from ruby/Dockerfile RUBY_VERSION" >&2
+            exit 1
+          fi
+          echo "codename=$codename" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build local ruby base image
@@ -67,15 +77,15 @@ jobs:
           context: ruby/
           target: base
           build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim-${{ steps.extract-codename.outputs.codename }}
           tags: test-image-ruby-base:latest
           cache-from: ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
           cache-to: type=gha,mode=max,scope=ruby
       - name: Fetch Debian Version
         id: fetch-debian-version
         run: |
-          docker pull ruby:${{ needs.latest-ruby.outputs.version }}-slim
-          DISTROLESS_DEBIAN_VERSION=$(docker run --rm ruby:${{ needs.latest-ruby.outputs.version }}-slim sh -c '. /etc/os-release && echo "$VERSION_ID"')
+          docker pull ruby:${{ needs.latest-ruby.outputs.version }}-slim-${{ steps.extract-codename.outputs.codename }}
+          DISTROLESS_DEBIAN_VERSION=$(docker run --rm ruby:${{ needs.latest-ruby.outputs.version }}-slim-${{ steps.extract-codename.outputs.codename }} sh -c '. /etc/os-release && echo "$VERSION_ID"')
           echo "distroless_debian_version=${DISTROLESS_DEBIAN_VERSION}" >> "$GITHUB_OUTPUT"
       - name: Build local ruby distroless image
         uses: docker/build-push-action@v7
@@ -85,7 +95,7 @@ jobs:
           context: ruby/
           target: distroless
           build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim-${{ steps.extract-codename.outputs.codename }}
             DISTROLESS_DEBIAN_VERSION=${{ steps.fetch-debian-version.outputs.distroless_debian_version }}
           tags: test-image-ruby-distroless:latest
           cache-from: |
@@ -138,7 +148,7 @@ jobs:
           context: ruby/
           target: base
           build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim-${{ needs.smoke.outputs.distroless_codename }}
           cache-from: ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
           cache-to: type=gha,mode=max,scope=ruby
           platforms: linux/amd64,linux/arm64
@@ -174,8 +184,8 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
-            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-distroless
-            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-distroless
+            type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-${{ needs.smoke.outputs.distroless_codename }}-distroless
+            type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-${{ needs.smoke.outputs.distroless_codename }}-distroless
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Login to GitHub Container Registry
@@ -195,7 +205,7 @@ jobs:
           context: ruby/
           target: distroless
           build-args: |
-            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim
+            RUBY_VERSION=${{ needs.latest-ruby.outputs.version }}-slim-${{ needs.smoke.outputs.distroless_codename }}
             DISTROLESS_DEBIAN_VERSION=${{ needs.smoke.outputs.distroless_debian_version }}
           cache-from: |
             ${{ inputs.use_cache && 'type=gha,scope=ruby' || '' }}
