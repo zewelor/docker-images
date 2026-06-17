@@ -45,6 +45,7 @@ jobs:
       image_name: ${{ matrix.image_name }}
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+      cache_qemu: false
     secrets: inherit
 
   ruby:
@@ -54,6 +55,7 @@ jobs:
     with:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+      cache_qemu: false
     secrets: inherit
 
   debian:
@@ -66,4 +68,5 @@ jobs:
       release_tag: '13'
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+      cache_qemu: false
     secrets: inherit
