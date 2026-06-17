@@ -2,11 +2,13 @@ ARG ALPINE_VERSION=3.24
 
 # Build stage - has apk for installing packages and collecting runtime deps
 FROM dhi.io/alpine-base:${ALPINE_VERSION}-alpine${ALPINE_VERSION}-dev AS build
+ARG ALPINE_VERSION
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+# NUT is in Alpine's community repository, which DHI's hardened mirror does not include.
 # Install nut and dependencies, then build the minimal runtime root
-RUN apk add --no-cache nut pax-utils && \
+RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community nut pax-utils && \
     mkdir -p /runtime-root/usr/sbin \
              /runtime-root/usr/bin \
              /runtime-root/usr/lib/nut \
