@@ -40,6 +40,7 @@ jobs:
           - rsync
           - sqlite3
           - tftp
+          - transmission
     uses: ./.github/workflows/reusable-alpine-image.yml
     with:
       image_name: ${{ matrix.image_name }}
