@@ -45,6 +45,18 @@ jobs:
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
           ignore: DL3018
+      - name: Extract app version
+        id: get_version
+        run: |
+          IMAGE_UPPER=$(echo "${{ inputs.image_name }}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+          VERSION=$(grep -iE "ARG ${IMAGE_UPPER}_VERSION=" "${{ inputs.image_name }}/Dockerfile" | cut -d'=' -f2 | tr -d '"'\'' ' || true)
+          if [ -n "$VERSION" ]; then
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "Found version: ${VERSION}"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "No custom version found"
+          fi
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
@@ -53,6 +65,8 @@ jobs:
           tags: |
             # full length sha
             type=sha,format=long,prefix=
+            # custom version tag
+            type=raw,value=${{ steps.get_version.outputs.version }},enable=${{ steps.get_version.outputs.version != '' }}
           flavor: |
             latest=true
       - name: Set up QEMU
