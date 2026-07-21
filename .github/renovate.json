@@ -7,13 +7,6 @@
   ],
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
-  "schedule": [
-    "* 0-3 1 * *"
-  ],
-  "automergeSchedule": [
-    "* 0-3 1 * *"
-  ],
-  "updateNotScheduled": false,
   "minimumReleaseAge": "14 days",
   "customManagers": [
     {
@@ -34,7 +27,9 @@
   "packageRules": [
     {
       "matchManagers": [
-        "github-actions"
+        "github-actions",
+        "dockerfile",
+        "custom.regex"
       ],
       "automerge": true,
       "automergeType": "branch",

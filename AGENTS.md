@@ -110,3 +110,23 @@ For non-standard image families, add or extend a reusable workflow only when the
 - Avoid broad refactors when touching one image.
 - If a change affects shared workflow behavior, run `actionlint` before pushing.
 - If CI fails, inspect the exact job logs before changing code. Registry timeouts can be transient; workflow syntax and smoke failures are not.
+
+## Renovate Configuration
+
+When modifying the Renovate configuration (located at `.github/renovate.json`), you **MUST** validate and dry-run the changes locally before committing. This is critical.
+
+### 1. Validate Config Syntax
+
+Run the official Renovate configuration validator:
+
+```bash
+npx --yes --package renovate renovate-config-validator
+```
+
+### 2. Run Local Dry-Run
+
+To check if Renovate can successfully clone, parse, and extract dependencies using the new configuration, run a dry-run using your GitHub token:
+
+```bash
+RENOVATE_TOKEN=$(gh auth token) npx --yes renovate --dry-run=local zewelor/docker-images
+```
