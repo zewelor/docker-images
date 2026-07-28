@@ -23,4 +23,4 @@ docker run -d \
 ```
 
 > [!NOTE]
-> The container defaults to `USER 0` (root) and expects mapped USB device access so `libusb` and the NUT driver (`upsdrvctl`) can interface with your physical UPS system without requiring container-wide `privileged` permissions.
+> The container runs as the dedicated `nut` user (`100:101`) and does not need `privileged` mode or added Linux capabilities. The mapped USB device must grant that user, or one of its supplemental groups, read/write access. In Kubernetes, use a device plugin for allocation and set an explicit supplemental group matching the device node's group.

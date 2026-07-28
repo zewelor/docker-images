@@ -29,14 +29,15 @@ RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v${ALP
     ln -sf /bin/busybox /runtime-root/bin/ash && \
     ln -sf /usr/sbin/upsd /runtime-root/sbin/upsd && \
     ln -sf /usr/sbin/upsdrvctl /runtime-root/sbin/upsdrvctl && \
-    # Ensure directories have proper permissions
+    # NUT runs as the dedicated image user. Kubernetes grants USB access through
+    # the device plugin and a supplemental group, not by running the daemon as root.
     chown -R 0:0 /runtime-root && \
-    chmod 755 /runtime-root/run/nut && \
-    chmod 755 /runtime-root/var/db/nut && \
     echo "root:x:0:0:root:/root:/bin/sh" > /runtime-root/etc/passwd && \
     echo "root:x:0:" > /runtime-root/etc/group && \
     echo "nut:x:100:101:nut:/var/db/nut:/sbin/nologin" >> /runtime-root/etc/passwd && \
     echo "nut:x:101:nut" >> /runtime-root/etc/group && \
+    chown -R 100:101 /runtime-root/etc/nut /runtime-root/run/nut /runtime-root/var/db/nut && \
+    chmod 750 /runtime-root/run/nut /runtime-root/var/db/nut && \
     # Trace shared libraries dependencies dynamically
     : > /tmp/runtime-libs && \
     printf '%s\n' /usr/sbin/upsd /usr/sbin/upsdrvctl /usr/bin/upsc /usr/bin/upscmd /bin/busybox > /tmp/pending-libs && \
@@ -73,8 +74,7 @@ COPY --from=build /runtime-root/ /
 
 EXPOSE 3493
 
-# Run as root in container to allow libusb to access mapped USB device nodes without privileged=true
-# hadolint ignore=DL3002
-USER 0
+# Device access is granted by the orchestrator; the NUT daemons do not need UID 0.
+USER 100:101
 
 ENTRYPOINT ["/entrypoint.sh"]

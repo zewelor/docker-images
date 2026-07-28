@@ -2,7 +2,7 @@
 set -e
 
 echo "Starting NUT driver..."
-/usr/sbin/upsdrvctl -u root start
+/usr/sbin/upsdrvctl -u nut start
 
 echo "Starting NUT daemon..."
-exec /usr/sbin/upsd -u root -D "$@"
+exec /usr/sbin/upsd -u nut -D "$@"
