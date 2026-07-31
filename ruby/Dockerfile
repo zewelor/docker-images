@@ -4,7 +4,7 @@
 #   3. distroless base image tag (base-debian13) below.
 # A bare -slim tag is not allowed: it tracks whatever Debian is current,
 # so the distroless stage would silently drift to the next stable release.
-ARG RUBY_VERSION=4.0.5-slim-trixie
+ARG RUBY_VERSION=4.0.6-slim-trixie
 ARG DISTROLESS_DEBIAN_VERSION=13
 FROM ruby:${RUBY_VERSION} AS base
 
