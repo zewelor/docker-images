@@ -22,6 +22,11 @@ on:
         required: false
         default: true
         type: boolean
+      needs_dhi_login:
+        description: Whether the Dockerfile pulls from dhi.io and needs registry login
+        required: false
+        default: true
+        type: boolean
 
 
 permissions: {}
@@ -77,6 +82,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Login to dhi.io
+        if: ${{ inputs.needs_dhi_login }}
         uses: nick-fields/retry@v4
         with:
           timeout_seconds: 30

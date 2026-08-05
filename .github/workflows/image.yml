@@ -36,6 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         image_name:
+          - hermes-agent
           - nut
           - rsync
           - sqlite3
