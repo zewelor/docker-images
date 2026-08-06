@@ -1,4 +1,4 @@
-name: Reusable alpine image build
+name: Reusable build image
 
 on:
   workflow_call:

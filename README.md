@@ -20,7 +20,7 @@ CI uses one thin workflow per image, plus one static full rebuild workflow.
 
 - `.github/workflows/image-<name>.yml` - The per-image workflow. It watches only that image directory, ignoring Markdown and `justfile` edits, then calls the appropriate reusable build/publish workflow.
 - `.github/workflows/image.yml` - The static full rebuild workflow for manual runs, weekly schedules, and workflow-file changes.
-- `.github/workflows/reusable-alpine-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for Alpine-based images. It relies directly on Dockerfile defaults and publishes latest and sha tags.
+- `.github/workflows/reusable-build-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for standard Docker images. It relies directly on Dockerfile defaults and publishes latest and sha tags.
 - `.github/workflows/reusable-debian-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for Debian-based hardened images.
 - `.github/workflows/reusable-ruby-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for Ruby-based images.
 

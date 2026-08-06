@@ -29,7 +29,7 @@ env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 
 jobs:
-  alpine:
+  standard:
     name: Build ${{ matrix.image_name }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     strategy:
@@ -41,7 +41,7 @@ jobs:
           - rsync
           - sqlite3
           - tftp
-    uses: ./.github/workflows/reusable-alpine-image.yml
+    uses: ./.github/workflows/reusable-build-image.yml
     with:
       image_name: ${{ matrix.image_name }}
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
