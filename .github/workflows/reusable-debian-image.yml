@@ -59,7 +59,7 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v7
-      - uses: hadolint/hadolint-action@v3.3.0
+      - uses: hadolint/hadolint-action@v3.4.0
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
           ignore: DL3008
