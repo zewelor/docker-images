@@ -80,6 +80,6 @@ COPY --from=distroless_builder /distroless-root/usr/lib64/ /usr/lib64/
 COPY --from=distroless_builder /distroless-root/app/ /app/
 COPY --from=distroless_builder /distroless-root/usr/bin/catatonit /usr/bin/catatonit
 
-USER nonroot
+USER 65532:65532
 
 ENTRYPOINT ["/usr/bin/catatonit", "--"]

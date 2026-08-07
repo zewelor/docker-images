@@ -23,8 +23,7 @@ RUN apt-get update && \
 
 COPY config/nvim/ /etc/xdg/nvim/
 
-RUN set -o pipefail && \
-    nvim --headless "+Lazy! sync" +qa && \
+RUN nvim --headless "+Lazy! sync" +qa && \
     find /usr/local/share/nvim/lazy -type d -name '.git' -prune -exec rm -rf {} + && \
     nvim --headless +qa && \
     mkdir -p /runtime-root/usr/bin /runtime-root/usr/libexec /runtime-root/usr/lib /runtime-root/usr/lib/cargo/bin /runtime-root/usr/share /runtime-root/usr/local/share /runtime-root/etc/ssh/ssh_config.d /runtime-root/etc/xdg /runtime-root/lib64 && \
