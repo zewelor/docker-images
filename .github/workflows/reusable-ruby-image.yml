@@ -19,7 +19,6 @@ on:
         default: true
         type: boolean
 
-
 permissions: {}
 
 env:
@@ -60,10 +59,16 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v7
-      - uses: hadolint/hadolint-action@v3.3.0
+      - uses: hadolint/hadolint-action@v3
         with:
           ignore: DL3018
           dockerfile: ruby/Dockerfile
+        continue-on-error: true
+      - name: Run droast (Dockerfile linter)
+        uses: immanuwell/dockerfile-roast@v1
+        with:
+          files: ruby/Dockerfile
+
       - name: Extract distroless codename from Dockerfile
         id: extract-codename
         run: |

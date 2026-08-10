@@ -59,10 +59,16 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v7
-      - uses: hadolint/hadolint-action@v3.3.0
+      - uses: hadolint/hadolint-action@v3
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
           ignore: DL3008
+        continue-on-error: true
+      - name: Run droast (Dockerfile linter)
+        uses: immanuwell/dockerfile-roast@v1
+        with:
+          files: ${{ inputs.image_name }}/Dockerfile
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6

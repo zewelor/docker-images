@@ -15,9 +15,10 @@ COPY --from=build /var/tftpboot /var/tftpboot
 VOLUME /var/tftpboot
 EXPOSE 69/udp
 
-# TFTP server must run as root to bind to privileged port 69 (ports < 1024)
-# in.tftpd drops privileges internally after binding to the port
+# Must run as root (USER 0) to bind port 69/udp on hosts with older kernels.
+# Non-root failed (commit 704bbc1, reverted c6988e9). in.tftpd drops privileges after bind.
 # hadolint ignore=DL3002
+# droast ignore=DF002
 USER 0
 
 ENTRYPOINT ["in.tftpd"]
