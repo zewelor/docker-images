@@ -17,8 +17,8 @@ EXPOSE 69/udp
 
 # Must run as root (USER 0) to bind port 69/udp on hosts with older kernels.
 # Non-root failed (commit 704bbc1, reverted c6988e9). in.tftpd drops privileges after bind.
-# hadolint ignore=DL3002
 # droast ignore=DF002
+# hadolint ignore=DL3002
 USER 0
 
 ENTRYPOINT ["in.tftpd"]
