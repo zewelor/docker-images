@@ -46,13 +46,13 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v7
-      - uses: hadolint/hadolint-action@v3
+      - uses: hadolint/hadolint-action@v3.4.0
         with:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
           ignore: DL3018
         continue-on-error: true
       - name: Run droast (Dockerfile linter)
-        uses: immanuwell/dockerfile-roast@v1
+        uses: immanuwell/dockerfile-roast@1.5.0
         with:
           files: ${{ inputs.image_name }}/Dockerfile
 
