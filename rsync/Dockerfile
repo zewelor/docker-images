@@ -47,8 +47,8 @@ COPY --from=build /runtime-root/usr/lib/ /usr/lib/
 
 # Must run as root (USER 0) for mounted volume access, owner/perm preservation (-a), and rsyncd.
 # Non-root failed (commit 6a4fc68, reverted 419f40a).
-# hadolint ignore=DL3002
 # droast ignore=DF002
+# hadolint ignore=DL3002
 USER 0
 
 ENTRYPOINT ["rsync"]
