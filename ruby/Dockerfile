@@ -13,7 +13,7 @@ ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive LD_PRELOAD="libjemalloc.so.2"
 
 # Create app user
 RUN groupadd --gid 1000 app && \
-    useradd --uid 1000 -g app -s /bin/bash --create-home app && \
+    useradd -l --uid 1000 -g app -s /bin/bash --create-home app && \
     mkdir -p ${APP_DIR} && \
     chown -R app:app ${APP_DIR}
 

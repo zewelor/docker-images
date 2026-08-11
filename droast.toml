@@ -1,2 +1,6 @@
 # Package versions are intentionally not pinned in this repository.
-skip = ["DF005", "DF052"]
+skip = [
+  "DF005", # apt-get install without pinned package versions
+  "DF012", # missing HEALTHCHECK instruction
+  "DF052", # apk add without pinned package versions
+]
