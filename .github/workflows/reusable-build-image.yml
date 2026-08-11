@@ -124,6 +124,7 @@ jobs:
           command: |
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
       - name: Build and push
+        if: ${{ inputs.publish }}
         id: docker_build
         uses: docker/build-push-action@v7
         with:
