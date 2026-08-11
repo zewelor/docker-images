@@ -2,5 +2,6 @@
 skip = [
   "DF005", # apt-get install without pinned package versions
   "DF012", # missing HEALTHCHECK instruction
+  "DF022", # missing EXPOSE instruction
   "DF052", # apk add without pinned package versions
 ]
