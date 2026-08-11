@@ -34,6 +34,7 @@ FROM base AS distroless_builder
 # DL4006: pipefail - not needed, we use set -eux and handle errors explicitly
 # SC2016: Single quotes intentional - we want literal $ for awk patterns
 # hadolint ignore=DL4006,SC2016
+# droast ignore=DF057
 RUN set -eux; \
     mkdir -p /distroless-root/usr/local /distroless-root/usr/lib /distroless-root/usr/lib64 /distroless-root/app /distroless-root/usr/bin; \
     cp -a /usr/local/. /distroless-root/usr/local/; \

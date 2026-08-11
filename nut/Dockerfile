@@ -8,6 +8,7 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 # NUT is in Alpine's community repository, which DHI's hardened mirror does not include.
 # Install nut and dependencies, then build the minimal runtime root
+# droast ignore=DF057
 RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community nut pax-utils && \
     mkdir -p /runtime-root/usr/sbin \
              /runtime-root/usr/bin \
