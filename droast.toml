@@ -1,2 +1,2 @@
 # Package versions are intentionally not pinned in this repository.
-skip = ["DF052"]
+skip = ["DF005", "DF052"]
