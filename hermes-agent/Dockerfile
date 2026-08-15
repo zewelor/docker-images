@@ -3,6 +3,10 @@ ARG HERMES_AGENT_VERSION=v2026.8.3
 # renovate: datasource=github-releases depName=jqlang/jq
 ARG JQ_VERSION=1.8.2
 
+# Artifact stage - pull multi-arch sourcetap binary from mutable latest package
+# hadolint ignore=DL3007
+FROM ghcr.io/zewelor/sourcetap:latest AS sourcetap
+
 # Build stage - download and verify kubectl and jq with explicit pipefail
 FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION} AS builder
 
@@ -39,4 +43,4 @@ FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 
 COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
-
+COPY --from=sourcetap /usr/local/bin/sourcetap /usr/local/bin/sourcetap

@@ -27,6 +27,11 @@ on:
         required: false
         default: true
         type: boolean
+      needs_ghcr_login:
+        description: Whether the build pulls private images from ghcr.io and needs registry login before smoke build
+        required: false
+        default: false
+        type: boolean
 
 
 permissions: {}
@@ -104,6 +109,14 @@ jobs:
           max_attempts: 3
           command: |
             echo "${{ secrets.DOCKER_DHI_TOKEN }}" | docker login dhi.io -u "${{ secrets.DOCKER_DHI_USERNAME }}" --password-stdin
+      - name: Login to GitHub Container Registry
+        if: ${{ inputs.needs_ghcr_login || inputs.publish }}
+        uses: nick-fields/retry@v4
+        with:
+          timeout_seconds: 30
+          max_attempts: 3
+          command: |
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
       - name: Build local image for smoke testing
         uses: docker/build-push-action@v7
         with:
@@ -115,14 +128,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
       - name: Run smoke test
         run: ./${{ inputs.image_name }}/smoke-test.sh test-image:latest
-      - name: Login to GitHub Container Registry
-        if: ${{ inputs.publish }}
-        uses: nick-fields/retry@v4
-        with:
-          timeout_seconds: 30
-          max_attempts: 3
-          command: |
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
       - name: Build and push
         if: ${{ inputs.publish }}
         id: docker_build

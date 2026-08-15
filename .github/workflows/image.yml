@@ -47,6 +47,7 @@ jobs:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       cache_qemu: false
+      needs_ghcr_login: ${{ matrix.image_name == 'hermes-agent' }}
     secrets: inherit
 
   ruby:

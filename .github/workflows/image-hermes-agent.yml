@@ -35,5 +35,5 @@ jobs:
       publish: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       needs_dhi_login: false
+      needs_ghcr_login: true
     secrets: inherit
-
