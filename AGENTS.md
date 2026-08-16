@@ -15,7 +15,6 @@ This repo builds multiarch Docker images for `ghcr.io/zewelor`. Optimize for sim
 
 - Images are multiarch: `linux/amd64` and `linux/arm64`.
 - Alpine-based images use Docker Hardened Images from `dhi.io/alpine-base`.
-- Debian hardened images use `dhi.io/debian-base`; currently `nvim` uses Debian 13.
 - Ruby uses the upstream `ruby:<version>-slim-trixie` base plus a distroless variant on `gcr.io/distroless/base-debian13`.
 - The Ruby `RUBY_VERSION` ARG must pin the Debian codename explicitly (e.g. `-slim-trixie`) so it stays aligned with `DISTROLESS_DEBIAN_VERSION`. A bare `-slim` tag is not acceptable: it currently tracks trixie, but the distroless stage must not be allowed to drift when upstream rolls `-slim` to the next stable release. Keep both values on the same Debian major.
 - The Ruby base image owns process supervision with `catatonit` as its `ENTRYPOINT` in both slim and distroless variants. Derived application images must put their default application process in `CMD` and must not replace the inherited `ENTRYPOINT`; retain an explicit application `ENTRYPOINT` only when it is a real wrapper with startup side effects.
@@ -46,7 +45,6 @@ Image-local `justfile`s should stay thin and import `../common.just`. Put shared
 Current patterns:
 
 - Alpine minimal runtime: `sqlite3`, `tftp`, `rsync`, `nut`.
-- Debian hardened runtime: `nvim`.
 - Ruby slim plus distroless: `ruby`.
 
 ## Build Contexts
@@ -61,7 +59,7 @@ Default to whitelist-style contexts:
 !.dockerignore
 ```
 
-Only opt in extra files when the Dockerfile actually copies them, such as `nut/entrypoint.sh` or `nvim/config/`.
+Only opt in extra files when the Dockerfile actually copies them, such as `nut/entrypoint.sh`.
 
 ## Smoke Tests
 
@@ -95,7 +93,7 @@ When adding a standard image:
 5. Add a thin `.github/workflows/image-<name>.yml` caller.
 6. Add the image to `.github/workflows/image.yml` if it should be included in full rebuilds.
 
-For non-standard image families, add or extend a reusable workflow only when the existing Alpine, Debian, or Ruby reusable workflow does not fit.
+For non-standard image families, add or extend a reusable workflow only when the existing Alpine or Ruby reusable workflow does not fit.
 
 ## Registry And Publishing
 
