@@ -1,0 +1,33 @@
+name: Delete nvim GHCR package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/delete-nvim-package.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  delete:
+    if: contains(github.event.head_commit.message, 'delete nvim GHCR package')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete ghcr.io/zewelor/nvim
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status="$(curl -sS -o /tmp/response -w '%{http_code}' -L -X DELETE \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "https://api.github.com/users/${{ github.repository_owner }}/packages/container/nvim")"
+          cat /tmp/response
+          if [ "${status}" != "204" ]; then
+            echo "GitHub API returned HTTP ${status}"
+            exit 1
+          fi
+          echo "Deleted ghcr.io/${{ github.repository_owner }}/nvim"
