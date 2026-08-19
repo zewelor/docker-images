@@ -7,7 +7,7 @@
   ],
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
-  "minimumReleaseAge": "14 days",
+  "minimumReleaseAge": "7 days",
   "customManagers": [
     {
       "customType": "regex",
@@ -34,6 +34,12 @@
       "automerge": true,
       "automergeType": "branch",
       "platformAutomerge": false
+    },
+    {
+      "matchPackageNames": [
+        "immanuwell/dockerfile-roast"
+      ],
+      "minimumReleaseAge": null
     },
     {
       "matchPackageNames": [
