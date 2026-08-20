@@ -53,7 +53,7 @@ jobs:
           dockerfile: ${{ inputs.image_name }}/Dockerfile
           ignore: DL3018
       - name: Run droast (Dockerfile linter)
-        uses: immanuwell/dockerfile-roast@1.6.0
+        uses: immanuwell/dockerfile-roast@1.6.1
         with:
           files: ${{ inputs.image_name }}/Dockerfile
 
