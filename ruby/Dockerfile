@@ -9,7 +9,10 @@ ARG DISTROLESS_DEBIAN_VERSION=13
 FROM ruby:${RUBY_VERSION} AS base
 
 ARG RUNTIME_PACKAGES="catatonit libjemalloc2"
-ENV APP_DIR=/app DEBIAN_FRONTEND=noninteractive LD_PRELOAD="libjemalloc.so.2"
+ENV APP_DIR=/app \
+    BUNDLE_VERSION=system \
+    DEBIAN_FRONTEND=noninteractive \
+    LD_PRELOAD="libjemalloc.so.2"
 
 # Create app user
 RUN groupadd --gid 1000 app && \
@@ -67,6 +70,7 @@ RUN set -eux; \
 FROM gcr.io/distroless/base-debian${DISTROLESS_DEBIAN_VERSION}:nonroot AS distroless
 
 ENV APP_DIR=/app \
+    BUNDLE_VERSION=system \
     HOME=/home/nonroot \
     BUNDLE_USER_HOME=/tmp/bundler \
     BUNDLE_USER_CACHE=/tmp/bundler/cache \

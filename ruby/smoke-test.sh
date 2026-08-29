@@ -6,3 +6,5 @@ distroless_image_tag="${2:?Usage: $0 <base-image-tag> <distroless-image-tag>}"
 
 docker run --rm "${base_image_tag}" /usr/local/bin/ruby --version
 docker run --rm "${distroless_image_tag}" /usr/local/bin/ruby --version
+docker run --rm "${base_image_tag}" /usr/local/bin/ruby -e 'abort unless ENV.fetch("BUNDLE_VERSION") == "system"'
+docker run --rm "${distroless_image_tag}" /usr/local/bin/ruby -e 'abort unless ENV.fetch("BUNDLE_VERSION") == "system"'
