@@ -24,8 +24,10 @@ ENV HOME=/borg \
     XDG_CACHE_HOME=/borg/cache \
     XDG_CONFIG_HOME=/borg/config \
     XDG_STATE_HOME=/borg/state
-
-USER 10001:10001
+# Must run as root (USER 0) for mounted backup source volume access across heterogeneous file owners.
+# droast ignore=DF002
+# hadolint ignore=DL3002
+USER 0
 
 ENTRYPOINT ["borgmatic"]
 CMD ["--help"]

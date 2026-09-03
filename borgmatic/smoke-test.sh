@@ -3,7 +3,7 @@ set -euo pipefail
 
 image_tag="${1:?Usage: $0 <image-tag>}"
 
-test "$(docker run --rm --entrypoint /bin/sh "${image_tag}" -c 'id -u')" = "10001"
+test "$(docker run --rm --entrypoint /bin/sh "${image_tag}" -c 'id -u')" = "0"
 docker run --rm --entrypoint borg "${image_tag}" --version
 docker run --rm "${image_tag}" --version
 docker run --rm --entrypoint ssh "${image_tag}" -V
