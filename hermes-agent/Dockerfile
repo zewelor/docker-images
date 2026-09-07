@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=nousresearch/hermes-agent
-ARG HERMES_AGENT_VERSION=v2026.8.27
+ARG HERMES_AGENT_VERSION=v2026.8.31
 # renovate: datasource=github-releases depName=jqlang/jq
 ARG JQ_VERSION=1.8.2
 
