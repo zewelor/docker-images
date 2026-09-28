@@ -34,6 +34,12 @@ ENTRYPOINT ["/usr/bin/catatonit", "--"]
 
 FROM base AS distroless_builder
 
+# Debug symbols are removed from the copied runtime, never from inherited layers.
+# hadolint ignore=DL3008
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends binutils && \
+    rm -rf /var/lib/apt/lists/*
+
 # droast ignore=DF057
 # DL4006: pipefail - not needed, we use set -eux and handle errors explicitly
 # SC2016: Single quotes intentional - we want literal $ for awk patterns
@@ -65,6 +71,7 @@ RUN set -eux; \
     mkdir -p "$(dirname "$dest")"; \
     cp -v "$lib" "$dest"; \
     done; \
+    find /distroless-root/usr/local -type f \( -name ruby -o -name "*.so" -o -name "*.so.*" \) -exec strip --strip-debug {} +; \
     chown -R 65532:65532 /distroless-root/app
 
 FROM gcr.io/distroless/base-debian${DISTROLESS_DEBIAN_VERSION}:nonroot AS distroless
