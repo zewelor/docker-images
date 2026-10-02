@@ -38,6 +38,7 @@ jobs:
         image_name:
           - borgmatic
           - hermes-agent
+          - mkt
           - nut
           - rsync
           - sqlite3
