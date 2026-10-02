@@ -17,10 +17,12 @@ Because the repo prefers freshness over reproducibility, local builds and CI alw
 
 CI uses one thin workflow per image, plus one static full rebuild workflow.
 
-- `.github/workflows/image-<name>.yml` - The per-image workflow. It watches only that image directory, ignoring Markdown and `justfile` edits, then calls the appropriate reusable build/publish workflow.
-- `.github/workflows/image.yml` - The static full rebuild workflow for manual runs, weekly schedules, and workflow-file changes.
+- `.github/workflows/image-<name>.yml` - The per-image workflow. It watches that image directory and its own workflow file, ignoring Markdown and image-local `justfile` edits, then calls the appropriate reusable build/publish workflow.
+- `.github/workflows/image.yml` - The static full rebuild workflow for manual runs, weekly schedules, and changes to `image.yml`, `reusable-*.yml` or the shared `droast.toml` lint configuration.
 - `.github/workflows/reusable-build-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for standard Docker images. It relies directly on Dockerfile defaults and publishes latest and sha tags.
 - `.github/workflows/reusable-ruby-image.yml` - The shared lint, smoke, build, tag, publish, and attestation logic for Ruby-based images.
+
+Changes to a dedicated `image-<name>.yml` rebuild only its image. Shared workflow changes are handled by the full rebuild instead of triggering every dedicated workflow. A commit changing both shared and image-specific inputs can trigger both paths.
 
 ## Adding or changing images
 

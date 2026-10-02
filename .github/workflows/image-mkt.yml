@@ -11,6 +11,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: &image_paths
       - 'mkt/**'
+      - '.github/workflows/image-mkt.yml'
       - '!mkt/**/*.md'
       - '!mkt/justfile'
   push:

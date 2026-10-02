@@ -11,6 +11,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: &image_paths
       - 'sqlite3/**'
+      - '.github/workflows/image-sqlite3.yml'
       - '!sqlite3/**/*.md'
       - '!sqlite3/justfile'
   push:

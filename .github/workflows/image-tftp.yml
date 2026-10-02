@@ -11,6 +11,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: &image_paths
       - 'tftp/**'
+      - '.github/workflows/image-tftp.yml'
       - '!tftp/**/*.md'
       - '!tftp/justfile'
   push:

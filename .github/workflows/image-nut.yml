@@ -11,6 +11,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: &image_paths
       - 'nut/**'
+      - '.github/workflows/image-nut.yml'
       - '!nut/**/*.md'
       - '!nut/justfile'
   push:

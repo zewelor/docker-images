@@ -78,9 +78,9 @@ Reusable workflows build the local test image, call the smoke script with the te
 
 CI is intentionally explicit:
 
-- `.github/workflows/image-<name>.yml` watches only that image directory, excluding Markdown and the image-local `justfile`, then calls the right reusable workflow.
-- `.github/workflows/image.yml` is the full rebuild workflow. It runs on manual dispatch, weekly schedule, and workflow-file changes.
-- Workflow-file changes must not trigger every per-image workflow. They are covered by `image.yml`.
+- `.github/workflows/image-<name>.yml` watches that image directory and its own workflow file, excluding Markdown and the image-local `justfile`, then calls the right reusable workflow.
+- `.github/workflows/image.yml` is the full rebuild workflow. It runs on manual dispatch, weekly schedule, and changes to `image.yml`, `reusable-*.yml` or `droast.toml`.
+- Shared workflow changes must not trigger every per-image workflow; `image.yml` covers them. Dedicated workflow changes rebuild only their own image.
 - Reusable workflows own lint, smoke, build, publish, retrying registry login, OCI labels, and build attestations.
 - Published images must include GitHub build provenance attestations.
 

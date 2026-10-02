@@ -11,6 +11,7 @@ on:
     types: [opened, synchronize, reopened]
     paths: &image_paths
       - 'borgmatic/**'
+      - '.github/workflows/image-borgmatic.yml'
       - '!borgmatic/**/*.md'
       - '!borgmatic/justfile'
   push:

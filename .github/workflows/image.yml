@@ -10,7 +10,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths: &workflow_paths
-      - '.github/workflows/**'
+      - '.github/workflows/image.yml'
+      - '.github/workflows/reusable-*.yml'
+      - 'droast.toml'
   push:
     branches:
       - main
