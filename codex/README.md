@@ -1,8 +1,8 @@
 # Codex + SSH
 
 For ChatGPT desktop connections over SSH. Official `python:3-slim-trixie` base,
-native Codex, Python 3 with pip and venv, curl, Dropbear, Git and OpenSSH client;
-no Node.js or npm. Runs as UID/GID `1000:1000`
+native Codex, Python 3 with pip and venv, Node.js 24 with npm/npx, curl,
+Dropbear, Git and OpenSSH client. Runs as UID/GID `1000:1000`
 with Bash as the login shell. Dropbear accepts keys only on port `2222`.
 
 Connection logs omit TCP connect/disconnect noise before authentication. Successful
@@ -22,6 +22,9 @@ wrapper forwards shutdown signals and drains logs before returning the server st
   Codex discovers them through the package layout. The bundled zsh serves internal
   execution; SSH login uses Bash already provided by the base image.
 - `codex-code-mode-host` embeds V8; it needs no separate JavaScript installation.
+- Copy the Node binary and npm from official `node:24-trixie-slim`; expose npm
+  and npx in `PATH` for JavaScript projects and local MCP servers launched by npx.
+  The runtime stays on Python slim. Node development headers and Yarn are omitted.
 - Python is available as both `python` and `python3`. Create project environments
   with `python -m venv .venv` and install dependencies with `.venv/bin/pip`.
 
@@ -80,10 +83,11 @@ cd codex && just
 ```
 
 Smoke requires Docker, `ssh-keygen` and Python 3 on the test host. It checks SSH
-access restrictions, the Bash login shell, Python/pip/venv and curl over
+access restrictions, the Bash login shell, Python/pip/venv, curl and Node/npm/npx over
 SSH, app-server commands and code-mode execution over SSH, plus home/state/host-key
 persistence across replacement, filtered TCP probes, startup errors and shutdown
-with an active SSH session. Test resources are cleaned up.
+with an active SSH session. It installs a local npm package and runs its CLI with
+npx as UID 1000, without registry access. Test resources are cleaned up.
 
 `CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
 images with version, commit-SHA and `latest` tags after smoke passes, with build

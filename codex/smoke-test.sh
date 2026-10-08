@@ -58,8 +58,19 @@ docker exec "$container" /bin/bash -c 'for attempt in 1 2 3; do exec 3<>/dev/tcp
 ssh_command 'set -eu; test -n "${BASH_VERSION:-}"; test "$SHELL" = /bin/bash; bash --version'
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
-ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version'
+ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version; node --version; npm --version; npx --version'
 ssh_command 'set -eu; python -m venv /tmp/python-venv; /tmp/python-venv/bin/python -m pip --version'
+# Install and run a local CLI without registry access, as the SSH user.
+# shellcheck disable=SC2016
+ssh_command 'set -eu
+    mkdir -p ~/npm-smoke/local-package
+    cd ~/npm-smoke
+    printf "%s\n" "{\"name\":\"npm-smoke-project\",\"version\":\"1.0.0\",\"private\":true}" > package.json
+    printf "%s\n" "{\"name\":\"npm-smoke-cli\",\"version\":\"1.0.0\",\"bin\":{\"npm-smoke\":\"cli.js\"}}" > local-package/package.json
+    printf "%s\n" "#!/usr/bin/env node" "require(\"node:assert/strict\").equal(process.getuid(), 1000); console.log(\"NPM_SMOKE_OK\");" > local-package/cli.js
+    npm install --offline --ignore-scripts --no-audit --no-fund ./local-package
+    test "$(npx --offline --no -- npm-smoke)" = NPM_SMOKE_OK
+    echo "PASS: npm local install and npx execution over SSH as UID 1000"'
 ssh_command 'set -eu; printf persisted > ~/project.txt; printf persisted > ~/.codex/smoke-state'
 # The test container supplies isolation; operator configuration selects that mode.
 ssh_command "printf '%s\n' 'sandbox_mode = \"danger-full-access\"' 'approval_policy = \"on-request\"' > ~/.codex/config.toml"

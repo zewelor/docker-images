@@ -1,3 +1,5 @@
+FROM node:24-trixie-slim AS node
+
 FROM debian:trixie-slim AS download
 
 # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>\d+\.\d+\.\d+)$
@@ -26,13 +28,16 @@ RUN set -eu; \
 FROM python:3-slim-trixie
 
 # Package versions intentionally track Debian updates.
+# Copied Node needs libstdc++ and, on arm64, libatomic.
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl dropbear-bin git openssh-client \
+        ca-certificates curl dropbear-bin git libatomic1 libstdc++6 openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=download /opt/codex /opt/codex
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
 RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && mkdir -p /home/codex/.ssh /home/codex/.codex /etc/dropbear \
@@ -40,7 +45,9 @@ RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && chown -R codex:codex /home/codex /etc/dropbear \
     && ln -s /opt/codex/bin/codex /usr/local/bin/codex \
     && ln -s /opt/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
-    && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg
+    && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg \
+    && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
 
