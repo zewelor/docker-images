@@ -1,54 +1,51 @@
 # Codex + SSH
 
-Debian trixie slim with the native Codex binary, Dropbear, Git, OpenSSH client
-and ripgrep. No Node.js or npm. Runs as `codex` (`1000:1000`).
+For ChatGPT desktop connections over SSH. Debian trixie slim, native Codex,
+Dropbear, Git and OpenSSH client; no Node.js or npm. Runs as UID/GID `1000:1000`
+with Bash as the login shell. Dropbear accepts keys only on port `2222`.
 
-The default `CMD` runs key-only SSH on port `2222`. Dropbear generates missing
-host keys itself; there is no entrypoint script. Other commands can run directly:
+## Package decisions
 
-```bash
-docker run --rm ghcr.io/zewelor/codex:latest codex --version
-```
+- Copy all of `/opt/codex` recursively, preserving metadata and future upstream files.
+  A binary allowlist previously omitted `codex-code-mode-host` and broke desktop tools.
+- Exclude only `codex-resources/voice`, before copying to the runtime image.
+  Its host audio runtime has no required use in this deployment; ordinary SSH does
+  not forward laptop audio devices. Restore it only for a concrete use case.
+- Symlink `codex`, `codex-code-mode-host` and upstream `rg` into `/usr/local/bin`
+  for shell `PATH` access. Do not install a second ripgrep from Debian.
+- Keep `codex-resources/bwrap` and `codex-resources/zsh/bin/zsh` in place.
+  Codex discovers them through the package layout; internal use needs no symlinks.
+  Bundled zsh supports Codex execution paths without changing the login shell.
+- `codex-code-mode-host` embeds V8; it needs no separate JavaScript installation.
 
-Runtime storage and SSH keys are supplied by the operator:
+The desktop starts `codex app-server` over SSH; no separate service or port is
+needed. For terminal use, run `codex --no-daemon`. The managed daemon requires
+process-tracking tools omitted from this image.
 
-- `/home/codex/.ssh/authorized_keys`: public keys; mount this file read-only, readable by UID 1000 and without group/other write permissions.
-- `/home/codex`: writable home, including normal Codex state in `~/.codex` and any projects stored here. Persist it to retain credentials and sessions.
-- `/etc/dropbear`: writable host-key directory. Persist it to retain the SSH host fingerprint.
+## Runtime setup
 
-Keep the home and `.ssh` directory writable only by their owner. Protect the
-home volume and its backups because Codex credentials contain access tokens.
+Supply these paths; the image creates no operator configuration:
 
-## Command isolation
+| Path | Requirement |
+| --- | --- |
+| `/home/codex` | Writable by UID 1000; persist to retain projects, credentials and sessions. |
+| `/home/codex/.ssh/authorized_keys` | Read-only public keys, readable by UID 1000, no group/other write permission. |
+| `/etc/dropbear` | Writable by UID 1000; persist to retain SSH host keys. |
 
-This image targets environments where the container runtime supplies isolation;
-Bubblewrap is omitted. Codex does not automatically disable its own sandbox in
-a container. For this deployment model, supply `~/.codex/config.toml`:
+Keep home and `.ssh` writable only by their owner. Protect credential storage and backups.
+
+When the container runtime supplies isolation, set `~/.codex/config.toml`:
 
 ```toml
 sandbox_mode = "danger-full-access"
 ```
 
-`approval_policy = "on-request"` is the [default](https://learn.chatgpt.com/docs/config-file/config-sample)
-and can be omitted unless you need to override existing configuration or client
-settings. There are no [documented environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables)
-for these two settings; use `config.toml` or CLI flags.
+Codex does not disable its sandbox automatically. Bundled Bubblewrap requires
+compatible kernel/namespace permissions. The desktop session's permissions must
+also allow this mode. `approval_policy` defaults to `on-request`.
+See [isolation guidance](https://learn.chatgpt.com/docs/agent-approvals-security).
 
-Alternatively, use `codex --sandbox danger-full-access` for a terminal session.
-Isolation then comes from the deployment's filesystem,
-process and network restrictions; see [Codex container guidance](https://learn.chatgpt.com/docs/agent-approvals-security).
-The desktop client can override sandbox settings per session, so its selected
-permissions must also permit operation without Codex's internal sandbox.
-The image does not create or override operator configuration.
-
-## ChatGPT desktop app over SSH
-
-The [desktop app](https://learn.chatgpt.com/docs/remote-connections#connect-to-an-ssh-host)
-starts the remote Codex app server through SSH using the user's login shell.
-The installed `codex` binary supports this mode; no separate app-server service
-or additional exposed port is required.
-
-Add the reachable host to your laptop's `~/.ssh/config`:
+## Desktop connection
 
 ```sshconfig
 Host codex-remote
@@ -59,27 +56,26 @@ Host codex-remote
     IdentitiesOnly yes
 ```
 
-Confirm `ssh codex-remote 'codex --version'` works. Authenticate remotely with
-`ssh -t codex-remote 'codex login --device-auth'`, then open **Settings > Connections**
-in the desktop app, add the SSH host and select a remote project folder.
-Device authentication must be enabled for your account/workspace; see
-[Codex authentication](https://learn.chatgpt.com/docs/auth#login-on-headless-devices).
+```bash
+ssh codex-remote 'codex --version'
+ssh -t codex-remote 'codex login --device-auth'
+```
 
-## Build and verification
+Enable [device authentication](https://learn.chatgpt.com/docs/auth#login-on-headless-devices)
+for the account/workspace, then add the SSH host under **Settings > Connections**
+and select a remote project folder. See [desktop SSH setup](https://learn.chatgpt.com/docs/remote-connections#connect-to-an-ssh-host).
+
+## Build and test
 
 ```bash
 cd codex && just
-./smoke-test.sh codex |& tee /tmp/codex-smoke.log
+./smoke-test.sh codex
 ```
 
-The smoke test requires Docker, `ssh-keygen` and Python 3 on the test host. It
-checks non-root SSH, unauthorized/root login rejection, an app-server protocol
-handshake and command execution over SSH with operator-provided sandbox settings,
-and home/Codex-state/host-key persistence across container
-replacement. Temporary containers, volumes and client keys are removed on exit.
+Smoke requires Docker, `ssh-keygen` and Python 3 on the test host. It checks SSH
+access restrictions, app-server commands and code-mode execution over SSH, plus
+home/state/host-key persistence across replacement. Test resources are cleaned up.
 
-`CODEX_VERSION` and its Renovate comment in the Dockerfile are the single version
-source. Existing repository rules provide branch automerge after CI and the
-seven-day release-age delay. Weekly rebuilds refresh unpinned Debian packages.
-CI publishes amd64/arm64 images with version, commit-SHA and `latest` tags and
-build-provenance attestations after smoke passes.
+`CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
+images with version, commit-SHA and `latest` tags after smoke passes, with build
+provenance. Weekly rebuilds refresh Debian packages.

@@ -17,10 +17,11 @@ RUN set -eu; \
         *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
     curl -fLsS --retry 3 \
-        "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${target}.tar.gz" \
+        "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-${target}.tar.gz" \
         -o /tmp/codex.tar.gz; \
-    tar -xzf /tmp/codex.tar.gz -C /tmp; \
-    install -m 755 "/tmp/codex-${target}" /usr/local/bin/codex
+    mkdir -p /opt/codex; \
+    tar -xzf /tmp/codex.tar.gz -C /opt/codex; \
+    rm -rf /opt/codex/codex-resources/voice
 
 FROM debian:trixie-slim
 
@@ -28,14 +29,17 @@ FROM debian:trixie-slim
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates dropbear-bin git openssh-client ripgrep \
+        ca-certificates dropbear-bin git openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && mkdir -p /home/codex/.ssh /home/codex/.codex /etc/dropbear \
     && chmod 700 /home/codex/.ssh /etc/dropbear \
-    && chown -R codex:codex /home/codex /etc/dropbear
+    && chown -R codex:codex /home/codex /etc/dropbear \
+    && ln -s /opt/codex/bin/codex /usr/local/bin/codex \
+    && ln -s /opt/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
+    && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg
 
-COPY --from=download /usr/local/bin/codex /usr/local/bin/codex
+COPY --from=download /opt/codex /opt/codex
 ENV HOME=/home/codex
 
 USER 1000:1000

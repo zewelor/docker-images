@@ -29,7 +29,7 @@ home_volume="$(docker volume create)"
 host_keys_volume="$(docker volume create)"
 
 start_server() {
-    container="$(docker run -d --network none --cap-drop ALL \
+    container="$(docker run -d --network none --read-only --tmpfs /tmp:mode=1777 --cap-drop ALL \
         --security-opt no-new-privileges \
         --mount "type=volume,src=$home_volume,dst=/home/codex" \
         --mount "type=volume,src=$host_keys_volume,dst=/etc/dropbear" \
@@ -106,7 +106,7 @@ with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, te
         client.stdin.flush()
         print("PASS: app-server initialize over SSH:", json.dumps(response))
         response = request(2, "command/exec", {
-            "command": ["/bin/sh", "-c", "printf command-ok > command-proof; cat command-proof"],
+            "command": ["/bin/sh", "-c", "set -eu; printf command-ok > command-proof; rg -q '^command-ok$' command-proof; cat command-proof"],
             "cwd": "/home/codex", "timeoutMs": 10000})
         assert response["result"]["exitCode"] == 0, response
         assert response["result"]["stdout"] == "command-ok", response
@@ -120,6 +120,110 @@ with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, te
             client.kill()
             client.wait()
             raise
+PY
+
+# Exercise the helper used by desktop code-mode tools, not only shell execution.
+python3 - "$container" <<'PY'
+import json
+import queue
+import struct
+import subprocess
+import sys
+import threading
+
+TIMEOUT = 20
+SESSION = "codex-host-smoke"
+MARKER = "CODE_MODE_HOST_SMOKE_OK"
+command = ["docker", "exec", "-i", sys.argv[1], "ssh", "-p", "2222", "-i", "/tmp/client-key",
+           "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+           "-o", "UserKnownHostsFile=/tmp/known_hosts", "codex@127.0.0.1", "codex-code-mode-host"]
+proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+frames = queue.Queue()
+
+
+def read_exact(size):
+    data = bytearray()
+    while len(data) < size:
+        chunk = proc.stdout.read(size - len(data))
+        if not chunk:
+            if not data and size == 4:
+                return None
+            raise EOFError("host closed stdout mid-frame")
+        data.extend(chunk)
+    return bytes(data)
+
+def reader():
+    try:
+        while True:
+            header = read_exact(4)
+            if header is None:
+                frames.put(None)
+                return
+            length = struct.unpack("<I", header)[0]
+            frames.put(json.loads(read_exact(length)))
+    except BaseException as error:
+        frames.put(error)
+
+threading.Thread(target=reader, daemon=True).start()
+
+def send(message):
+    body = json.dumps(message, separators=(",", ":")).encode()
+    proc.stdin.write(struct.pack("<I", len(body)) + body)
+    proc.stdin.flush()
+
+def recv():
+    message = frames.get(timeout=TIMEOUT)
+    if isinstance(message, BaseException):
+        raise message
+    if message is None:
+        raise EOFError("host closed stdout")
+    return message
+
+def response(request_id, expected):
+    while True:
+        message = recv()
+        if message.get("type") == "operation/response" and message.get("id") == request_id:
+            result = message["result"]
+            assert result["status"] == "ok", result
+            assert result["value"]["type"] == expected, result
+            return result["value"]
+
+try:
+    send({"type": "connection/hello", "supportedVersions": [1], "requiredCapabilities": [], "optionalCapabilities": []})
+    hello = recv()
+    assert hello["type"] == "connection/ready" and hello["selectedVersion"] == 1, hello
+    send({"type": "operation/request", "id": 1, "request": {"method": "session/open", "sessionId": SESSION}})
+    response(1, "session/ready")
+    send({"type": "operation/request", "id": 2, "request": {"method": "session/execute", "sessionId": SESSION, "request": {"tool_call_id": "smoke", "enabled_tools": [], "source": 'text("' + MARKER + '");', "yield_time_ms": 10000, "max_output_tokens": 256}}})
+    response(2, "execution/started")
+    while True:
+        execution = recv()
+        if execution.get("type") == "execute/initialResponse" and execution.get("id") == 2:
+            break
+    result = execution["result"]
+    assert result["status"] == "ok" and "Result" in result["value"], result
+    assert any(item.get("type") == "input_text" and MARKER in item.get("text", "")
+               for item in result["value"]["Result"]["content_items"]), result
+    send({"type": "operation/request", "id": 3, "request": {"method": "session/shutdown", "sessionId": SESSION}})
+    response(3, "session/closed")
+    proc.stdin.close()
+    assert proc.wait(timeout=TIMEOUT) == 0, "host exited unsuccessfully"
+    print("PASS: V1 handshake, session open, JavaScript output, and session close")
+finally:
+    if proc.poll() is None:
+        try:
+            proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=2)
 PY
 
 docker exec -i "$container" sh -c 'umask 077; cat > /tmp/untrusted-key' < "$test_dir/untrusted"
