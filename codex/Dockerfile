@@ -29,14 +29,12 @@ FROM python:3-slim-trixie
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl dropbear-bin git openssh-client \
+        ca-certificates curl dropbear-bin git openssh-client zsh \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=download /opt/codex /opt/codex
 
-RUN ln -s /opt/codex/codex-resources/zsh/bin/zsh /usr/local/bin/zsh \
-    && echo /usr/local/bin/zsh >> /etc/shells \
-    && useradd --create-home --uid 1000 --user-group --shell /usr/local/bin/zsh codex \
+RUN useradd --create-home --uid 1000 --user-group --shell /usr/bin/zsh codex \
     && mkdir -p /home/codex/.ssh /home/codex/.codex /etc/dropbear \
     && chmod 700 /home/codex/.ssh /etc/dropbear \
     && chown -R codex:codex /home/codex /etc/dropbear \
@@ -47,7 +45,7 @@ RUN ln -s /opt/codex/codex-resources/zsh/bin/zsh /usr/local/bin/zsh \
 COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
 
 ENV HOME=/home/codex \
-    SHELL=/usr/local/bin/zsh
+    SHELL=/usr/bin/zsh
 
 USER 1000:1000
 WORKDIR /home/codex
