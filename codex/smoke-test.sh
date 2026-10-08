@@ -52,9 +52,12 @@ ssh_command() {
 }
 
 start_server
+# shellcheck disable=SC2016
+ssh_command 'set -eu; test -n "${ZSH_VERSION:-}"; test "$SHELL" = /usr/local/bin/zsh; zsh --version'
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
-ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version'
+ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version'
+ssh_command 'set -eu; python -m venv /tmp/python-venv; /tmp/python-venv/bin/python -m pip --version'
 ssh_command 'set -eu; printf persisted > ~/project.txt; printf persisted > ~/.codex/smoke-state'
 # The test container supplies isolation; operator configuration selects that mode.
 ssh_command "printf '%s\n' 'sandbox_mode = \"danger-full-access\"' 'approval_policy = \"on-request\"' > ~/.codex/config.toml"

@@ -1,8 +1,9 @@
 # Codex + SSH
 
-For ChatGPT desktop connections over SSH. Debian trixie slim, native Codex,
-Dropbear, Git and OpenSSH client; no Node.js or npm. Runs as UID/GID `1000:1000`
-with Bash as the login shell. Dropbear accepts keys only on port `2222`.
+For ChatGPT desktop connections over SSH. Official `python:3-slim-trixie` base,
+native Codex, Python 3 with pip and venv, curl, Dropbear, Git and OpenSSH client;
+no Node.js or npm. Runs as UID/GID `1000:1000`
+with bundled zsh as the login shell. Dropbear accepts keys only on port `2222`.
 
 ## Package decisions
 
@@ -14,9 +15,11 @@ with Bash as the login shell. Dropbear accepts keys only on port `2222`.
 - Symlink `codex`, `codex-code-mode-host` and upstream `rg` into `/usr/local/bin`
   for shell `PATH` access. Do not install a second ripgrep from Debian.
 - Keep `codex-resources/bwrap` and `codex-resources/zsh/bin/zsh` in place.
-  Codex discovers them through the package layout; internal use needs no symlinks.
-  Bundled zsh supports Codex execution paths without changing the login shell.
+  Codex discovers them through the package layout. Symlink bundled zsh into
+  `/usr/local/bin/zsh` for `PATH` access and use it as the login shell.
 - `codex-code-mode-host` embeds V8; it needs no separate JavaScript installation.
+- Python is available as both `python` and `python3`. Create project environments
+  with `python -m venv .venv` and install dependencies with `.venv/bin/pip`.
 
 The desktop starts `codex app-server` over SSH; no separate service or port is
 needed. For terminal use, run `codex --no-daemon`. The managed daemon requires
@@ -73,8 +76,9 @@ cd codex && just
 ```
 
 Smoke requires Docker, `ssh-keygen` and Python 3 on the test host. It checks SSH
-access restrictions, app-server commands and code-mode execution over SSH, plus
-home/state/host-key persistence across replacement. Test resources are cleaned up.
+access restrictions, the zsh login shell, Python/pip/venv and curl over SSH,
+app-server commands and code-mode execution over SSH, plus home/state/host-key
+persistence across replacement. Test resources are cleaned up.
 
 `CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
 images with version, commit-SHA and `latest` tags after smoke passes, with build

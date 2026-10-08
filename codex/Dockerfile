@@ -23,15 +23,20 @@ RUN set -eu; \
     tar -xzf /tmp/codex.tar.gz -C /opt/codex; \
     rm -rf /opt/codex/codex-resources/voice
 
-FROM debian:trixie-slim
+FROM python:3-slim-trixie
 
 # Package versions intentionally track Debian updates.
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates dropbear-bin git openssh-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
+        ca-certificates curl dropbear-bin git openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=download /opt/codex /opt/codex
+
+RUN ln -s /opt/codex/codex-resources/zsh/bin/zsh /usr/local/bin/zsh \
+    && echo /usr/local/bin/zsh >> /etc/shells \
+    && useradd --create-home --uid 1000 --user-group --shell /usr/local/bin/zsh codex \
     && mkdir -p /home/codex/.ssh /home/codex/.codex /etc/dropbear \
     && chmod 700 /home/codex/.ssh /etc/dropbear \
     && chown -R codex:codex /home/codex /etc/dropbear \
@@ -39,8 +44,8 @@ RUN apt-get update \
     && ln -s /opt/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
     && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg
 
-COPY --from=download /opt/codex /opt/codex
-ENV HOME=/home/codex
+ENV HOME=/home/codex \
+    SHELL=/usr/local/bin/zsh
 
 USER 1000:1000
 WORKDIR /home/codex
