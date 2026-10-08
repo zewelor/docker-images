@@ -36,6 +36,11 @@ on:
 
 permissions: {}
 
+# Share the image lock across callers; let an active publication finish.
+concurrency:
+  group: image-${{ inputs.image_name }}-${{ inputs.publish && 'publish' || github.ref }}
+  cancel-in-progress: false
+
 env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 

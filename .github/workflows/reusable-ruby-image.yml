@@ -21,6 +21,11 @@ on:
 
 permissions: {}
 
+# Hold one lock across both Ruby variants, shared by all callers.
+concurrency:
+  group: image-ruby-${{ inputs.publish && 'publish' || github.ref }}
+  cancel-in-progress: false
+
 env:
   DOCKER_BUILD_CHECKS_ANNOTATIONS: false
 

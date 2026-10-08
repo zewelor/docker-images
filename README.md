@@ -28,6 +28,10 @@ CI uses one thin workflow per image, plus one static full rebuild workflow.
 
 Changes to a dedicated `image-<name>.yml` rebuild only its image. Shared workflow changes are handled by the full rebuild instead of triggering every dedicated workflow. A commit changing both shared and image-specific inputs can trigger both paths.
 
+Reusable workflows serialize publication per image across both paths. Active runs
+finish; the newest pending run replaces any older pending run. Different images
+can still build in parallel, and non-publishing runs use separate locks per ref.
+
 ## Adding or changing images
 
 - **Standard Alpine/Debian-based Images**: To add a new image:
