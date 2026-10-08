@@ -35,11 +35,12 @@ process-tracking tools omitted from this image.
 For a terminal session that keeps running after SSH disconnects:
 
 ```bash
-tmux new -As codex
-codex --no-daemon
+tmux new -As codex 'codex --no-daemon'
 ```
 
-Detach with **Ctrl+B, then D** before leaving SSH. Reconnect with
+The system config in `/etc/tmux.conf` uses **Ctrl+A** as the prefix.
+Press **Ctrl+A twice** to return to the previous window.
+Detach with **Ctrl+A, then D** before leaving SSH. Reconnect with
 `tmux attach -t codex`. The session also survives an unexpected SSH disconnect;
 replacing or restarting the container ends its processes.
 
@@ -99,7 +100,8 @@ SSH, app-server commands and code-mode execution over SSH, plus home/state/host-
 persistence across replacement, filtered TCP probes, startup errors and shutdown
 with an active SSH session. It installs a local npm package and runs its CLI with
 npx as UID 1000, without registry access. It also checks that a tmux job survives
-an SSH disconnect, reattachment and keyboard detach. Test resources are cleaned up.
+an SSH disconnect, reattachment, the Ctrl+A window shortcut and keyboard detach.
+Test resources are cleaned up.
 
 `CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
 images with version, commit-SHA and `latest` tags after smoke passes, with build

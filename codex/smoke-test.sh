@@ -92,31 +92,47 @@ print(remote("tmux -V"))
 clients = []
 try:
     client = subprocess.Popen(ssh + ["-tt", host,
-        "TERM=xterm-256color tmux -f /dev/null new-session -s ssh-smoke "
+        "TERM=xterm-256color tmux new-session -s ssh-smoke "
         "'printf \"TMUX_SSH_SMOKE_OK\\n\"; exec sleep 60'"],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     clients.append(client)
     wait_attached(client)
+    prefix = remote("tmux show-options -gv prefix")
+    assert prefix == "C-a", prefix
     pane_pid = remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'")
     assert pane_pid.isdecimal(), pane_pid
     assert "TMUX_SSH_SMOKE_OK" in remote("tmux capture-pane -p -t ssh-smoke")
     # OpenSSH's escape closes the transport while the tmux client is attached.
-    client.communicate(input=b"\n~.", timeout=5)
-    assert client.returncode == 255, client.returncode
+    output, _ = client.communicate(input=b"\n~.", timeout=5)
+    assert client.returncode == 255, (client.returncode, output)
     assert remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'") == pane_pid
     remote(f"kill -0 {pane_pid}")
 
+    remote("tmux new-window -t ssh-smoke -n extra 'sleep 60'")
     client = subprocess.Popen(ssh + ["-tt", host,
         "TERM=xterm-256color tmux attach-session -t ssh-smoke"],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     clients.append(client)
     wait_attached(client)
-    client.communicate(input=b"\x02d", timeout=5)
-    assert client.returncode == 0, client.returncode
+    # Ctrl+A twice returns to the original window; Ctrl+A D detaches.
+    client.stdin.write(b"\x01\x01")
+    client.stdin.flush()
+    for _ in range(30):
+        if remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'") == pane_pid:
+            break
+        time.sleep(0.1)
+    else:
+        raise RuntimeError("Ctrl+A A did not return to the original tmux window")
+    client.stdin.write(b"\x01d")
+    client.stdin.flush()
+    # Keep SSH stdin open until tmux handles the keys and exits its client.
+    client.wait(timeout=5)
+    output, _ = client.communicate()
+    assert client.returncode == 0, (client.returncode, output)
     assert remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'") == pane_pid
     remote(f"kill -0 {pane_pid}")
     assert "TMUX_SSH_SMOKE_OK" in remote("tmux capture-pane -p -t ssh-smoke")
-    print("PASS: tmux job survives SSH disconnect, reattachment and Ctrl+B D detach")
+    print("PASS: tmux job survives SSH disconnect, reattachment, Ctrl+A A and Ctrl+A D")
 finally:
     subprocess.run(ssh + [host, "tmux kill-session -t ssh-smoke"],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

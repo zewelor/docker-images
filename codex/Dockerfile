@@ -50,6 +50,7 @@ RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
+COPY tmux.conf /etc/tmux.conf
 
 ENV HOME=/home/codex \
     SHELL=/bin/bash
