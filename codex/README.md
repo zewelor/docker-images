@@ -5,6 +5,10 @@ native Codex, Python 3 with pip and venv, curl, Dropbear, Git and OpenSSH client
 no Node.js or npm. Runs as UID/GID `1000:1000`
 with bundled zsh as the login shell. Dropbear accepts keys only on port `2222`.
 
+Connection logs omit TCP connect/disconnect noise before authentication. Successful
+logins, authentication failures and server errors remain on stderr. The Bash/sed
+wrapper forwards shutdown signals and drains logs before returning the server status.
+
 ## Package decisions
 
 - Copy all of `/opt/codex` recursively, preserving metadata and future upstream files.
@@ -78,7 +82,8 @@ cd codex && just
 Smoke requires Docker, `ssh-keygen` and Python 3 on the test host. It checks SSH
 access restrictions, the zsh login shell, Python/pip/venv and curl over SSH,
 app-server commands and code-mode execution over SSH, plus home/state/host-key
-persistence across replacement. Test resources are cleaned up.
+persistence across replacement, filtered TCP probes, startup errors and shutdown
+with an active SSH session. Test resources are cleaned up.
 
 `CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
 images with version, commit-SHA and `latest` tags after smoke passes, with build

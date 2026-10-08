@@ -52,6 +52,8 @@ ssh_command() {
 }
 
 start_server
+# TCP health checks must not produce unauthenticated connection noise.
+docker exec "$container" /bin/bash -c 'for attempt in 1 2 3; do exec 3<>/dev/tcp/127.0.0.1/2222; IFS= read -r -t 2 banner <&3; exec 3<&-; exec 3>&-; done'
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test -n "${ZSH_VERSION:-}"; test "$SHELL" = /usr/local/bin/zsh; zsh --version'
 # Expand these expressions inside the remote shell.
@@ -243,10 +245,41 @@ if docker exec "$container" ssh -p 2222 -i /tmp/client-key \
     exit 1
 fi
 
-docker rm -f "$container" >/dev/null
+docker logs "$container" > "$test_dir/server.log" 2>&1
+if grep -E ' Child connection from | Exit before auth from <[^>]+>: Exited normally$' "$test_dir/server.log"; then
+    echo 'ERROR: TCP probe noise reached container logs' >&2
+    exit 1
+fi
+grep -q 'Pubkey auth succeeded' "$test_dir/server.log"
+grep -q 'Login attempt with wrong user root' "$test_dir/server.log"
+
+# Keep a session open: its inherited stderr must not block container shutdown.
+ssh_command 'echo active; sleep 60' > "$test_dir/active-client.log" 2>&1 &
+client_pid=$!
+for ((attempt = 0; attempt < 30; attempt++)); do
+    if grep -q '^active' "$test_dir/active-client.log"; then break; fi
+    sleep 0.1
+done
+grep -q '^active' "$test_dir/active-client.log"
+docker stop -t 3 "$container" >/dev/null
+test "$(docker inspect "$container" --format '{{.State.ExitCode}}')" = 0
+wait "$client_pid" || true
+docker logs "$container" > "$test_dir/stopped-server.log" 2>&1
+grep -q 'Terminated by signal' "$test_dir/stopped-server.log"
+echo 'PASS: TCP probe noise filtered, auth logs preserved, active SSH shutdown clean'
+
+docker rm "$container" >/dev/null
 container=""
 start_server
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(cat ~/project.txt)" = persisted; test "$(cat ~/.codex/smoke-state)" = persisted'
 test "$host_key" = "$(docker exec "$container" sha256sum /etc/dropbear/dropbear_ed25519_host_key)"
 echo 'PASS: non-root SSH, unauthorized/root login rejection, home/Codex state and host-key persistence'
+
+# A fatal startup error must stay visible and retain a nonzero status.
+if docker run --rm --network none --read-only "$image_tag" /usr/local/bin/dropbear-entrypoint -F -E -r /missing-host-key -p 2222 > "$test_dir/startup-error.log" 2>&1; then
+    echo 'ERROR: Dropbear accepted missing host keys' >&2
+    exit 1
+fi
+grep -q 'Early exit: No hostkeys available' "$test_dir/startup-error.log"
+echo 'PASS: fatal startup diagnostics and exit status preserved'

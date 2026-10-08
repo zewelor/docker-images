@@ -44,6 +44,8 @@ RUN ln -s /opt/codex/codex-resources/zsh/bin/zsh /usr/local/bin/zsh \
     && ln -s /opt/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
     && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg
 
+COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
+
 ENV HOME=/home/codex \
     SHELL=/usr/local/bin/zsh
 
@@ -51,4 +53,4 @@ USER 1000:1000
 WORKDIR /home/codex
 EXPOSE 2222
 
-CMD ["/usr/sbin/dropbear", "-F", "-E", "-R", "-s", "-w", "-p", "2222"]
+CMD ["/usr/local/bin/dropbear-entrypoint", "-F", "-E", "-R", "-s", "-w", "-p", "2222"]
