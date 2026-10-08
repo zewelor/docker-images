@@ -59,6 +59,73 @@ ssh_command 'set -eu; test -n "${BASH_VERSION:-}"; test "$SHELL" = /bin/bash; ba
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version; node --version; npm --version; npx --version'
+
+# A real SSH disconnect must leave the terminal job available for reattachment.
+python3 - "$container" <<'PY'
+import subprocess
+import sys
+import time
+
+ssh = ["docker", "exec", "-i", sys.argv[1], "ssh", "-p", "2222", "-i", "/tmp/client-key",
+       "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+       "-o", "UserKnownHostsFile=/tmp/known_hosts"]
+host = "codex@127.0.0.1"
+
+
+def remote(command):
+    return subprocess.check_output(ssh + [host, command], text=True).strip()
+
+
+def wait_attached(client):
+    for _ in range(30):
+        if client.poll() is not None:
+            raise RuntimeError(f"SSH exited before attaching: {client.communicate()[0]!r}")
+        result = subprocess.run(ssh + [host, "tmux list-clients -F '#{client_session}'"],
+                                capture_output=True, text=True)
+        if result.returncode == 0 and "ssh-smoke" in result.stdout.splitlines():
+            return
+        time.sleep(0.1)
+    raise RuntimeError("SSH did not attach to tmux within the timeout")
+
+
+print(remote("tmux -V"))
+clients = []
+try:
+    client = subprocess.Popen(ssh + ["-tt", host,
+        "TERM=xterm-256color tmux -f /dev/null new-session -s ssh-smoke "
+        "'printf \"TMUX_SSH_SMOKE_OK\\n\"; exec sleep 60'"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    clients.append(client)
+    wait_attached(client)
+    pane_pid = remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'")
+    assert pane_pid.isdecimal(), pane_pid
+    assert "TMUX_SSH_SMOKE_OK" in remote("tmux capture-pane -p -t ssh-smoke")
+    # OpenSSH's escape closes the transport while the tmux client is attached.
+    client.communicate(input=b"\n~.", timeout=5)
+    assert client.returncode == 255, client.returncode
+    assert remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'") == pane_pid
+    remote(f"kill -0 {pane_pid}")
+
+    client = subprocess.Popen(ssh + ["-tt", host,
+        "TERM=xterm-256color tmux attach-session -t ssh-smoke"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    clients.append(client)
+    wait_attached(client)
+    client.communicate(input=b"\x02d", timeout=5)
+    assert client.returncode == 0, client.returncode
+    assert remote("tmux display-message -p -t ssh-smoke '#{pane_pid}'") == pane_pid
+    remote(f"kill -0 {pane_pid}")
+    assert "TMUX_SSH_SMOKE_OK" in remote("tmux capture-pane -p -t ssh-smoke")
+    print("PASS: tmux job survives SSH disconnect, reattachment and Ctrl+B D detach")
+finally:
+    subprocess.run(ssh + [host, "tmux kill-session -t ssh-smoke"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for client in clients:
+        if client.poll() is None:
+            client.terminate()
+            client.wait(timeout=5)
+PY
+
 ssh_command 'set -eu; python -m venv /tmp/python-venv; /tmp/python-venv/bin/python -m pip --version'
 # Install and run a local CLI without registry access, as the SSH user.
 # shellcheck disable=SC2016

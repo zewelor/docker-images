@@ -2,7 +2,7 @@
 
 For ChatGPT desktop connections over SSH. Official `python:3-slim-trixie` base,
 native Codex, Python 3 with pip and venv, Node.js 24 with npm/npx, curl,
-Dropbear, Git and OpenSSH client. Runs as UID/GID `1000:1000`
+Dropbear, Git, OpenSSH client and tmux. Runs as UID/GID `1000:1000`
 with Bash as the login shell. Dropbear accepts keys only on port `2222`.
 
 Connection logs omit TCP connect/disconnect noise before authentication. Successful
@@ -31,6 +31,17 @@ wrapper forwards shutdown signals and drains logs before returning the server st
 The desktop starts `codex app-server` over SSH; no separate service or port is
 needed. For terminal use, run `codex --no-daemon`. The managed daemon requires
 process-tracking tools omitted from this image.
+
+For a terminal session that keeps running after SSH disconnects:
+
+```bash
+tmux new -As codex
+codex --no-daemon
+```
+
+Detach with **Ctrl+B, then D** before leaving SSH. Reconnect with
+`tmux attach -t codex`. The session also survives an unexpected SSH disconnect;
+replacing or restarting the container ends its processes.
 
 ## Runtime setup
 
@@ -87,7 +98,8 @@ access restrictions, the Bash login shell, Python/pip/venv, curl and Node/npm/np
 SSH, app-server commands and code-mode execution over SSH, plus home/state/host-key
 persistence across replacement, filtered TCP probes, startup errors and shutdown
 with an active SSH session. It installs a local npm package and runs its CLI with
-npx as UID 1000, without registry access. Test resources are cleaned up.
+npx as UID 1000, without registry access. It also checks that a tmux job survives
+an SSH disconnect, reattachment and keyboard detach. Test resources are cleaned up.
 
 `CODEX_VERSION` in the Dockerfile owns the version. CI publishes amd64/arm64
 images with version, commit-SHA and `latest` tags after smoke passes, with build

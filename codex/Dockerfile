@@ -32,7 +32,7 @@ FROM python:3-slim-trixie
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl dropbear-bin git libatomic1 libstdc++6 openssh-client \
+        ca-certificates curl dropbear-bin git libatomic1 libstdc++6 openssh-client tmux \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=download /opt/codex /opt/codex
