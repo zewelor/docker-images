@@ -55,32 +55,7 @@ start_server
 # TCP health checks must not produce unauthenticated connection noise.
 docker exec "$container" /bin/bash -c 'for attempt in 1 2 3; do exec 3<>/dev/tcp/127.0.0.1/2222; IFS= read -r -t 2 banner <&3; exec 3<&-; exec 3>&-; done'
 # shellcheck disable=SC2016
-ssh_command 'set -eu; test -n "${ZSH_VERSION:-}"; test "$SHELL" = /usr/bin/zsh; zsh --version'
-# Skip the first-login setup wizard during the unattended terminal test.
-ssh_command ': > ~/.zshrc'
-
-python3 - "$container" <<'PY'
-import subprocess
-import sys
-
-command = ["docker", "exec", "-i", sys.argv[1], "ssh", "-tt", "-p", "2222", "-i", "/tmp/client-key",
-           "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes", "-o", "ConnectTimeout=2",
-           "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=/tmp/known_hosts",
-           "codex@127.0.0.1",
-           "zsh -ilc '[[ -o interactive && -o login ]] && zmodload zsh/zle && zle -la >/dev/null && printf INTERACTIVE_ZSH_OK'"]
-with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as client:
-    try:
-        client.wait(timeout=15)
-    except subprocess.TimeoutExpired:
-        client.kill()
-        raise
-    stdout, stderr = client.communicate()
-    assert client.returncode == 0, stdout + stderr
-    assert "INTERACTIVE_ZSH_OK" in stdout, stdout
-    assert "failed to load module" not in stdout + stderr, stdout + stderr
-print("PASS: interactive SSH login with ZLE widgets available")
-PY
-
+ssh_command 'set -eu; test -n "${BASH_VERSION:-}"; test "$SHELL" = /bin/bash; bash --version'
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version'
