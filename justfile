@@ -1,7 +1,7 @@
 import "common.just"
 
 # Build all images
-build-all: build-borgmatic build-sqlite3 build-rsync build-tftp build-ruby build-nut build-hermes-agent
+build-all: build-borgmatic build-sqlite3 build-rsync build-tftp build-ruby build-nut build-hermes-agent build-codex
 
 # Individual builds
 build-borgmatic:
@@ -24,3 +24,6 @@ build-nut:
 
 build-hermes-agent:
     just hermes-agent/
+
+build-codex:
+    just codex/

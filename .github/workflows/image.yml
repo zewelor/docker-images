@@ -39,6 +39,7 @@ jobs:
       matrix:
         image_name:
           - borgmatic
+          - codex
           - hermes-agent
           - nut
           - rsync
@@ -50,6 +51,7 @@ jobs:
       publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       cache_qemu: false
+      needs_dhi_login: ${{ matrix.image_name != 'codex' }}
       needs_ghcr_login: ${{ matrix.image_name == 'hermes-agent' }}
     secrets: inherit
 

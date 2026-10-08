@@ -112,6 +112,16 @@ For non-standard image families, add or extend a reusable workflow only when the
 
 ## Renovate Configuration
 
+For version ARGs that Renovate's built-in managers do not detect, use the shared
+regex manager in `.github/renovate.json`. Put `# renovate: datasource=<datasource> depName=<package>`
+immediately before `ARG <NAME>_VERSION=<version>`. Optional `versioning=<scheme>`
+and then `extractVersion=<regex>` may follow `depName` on the same comment line.
+See `codex/Dockerfile` for a working release-tag normalization example.
+
+- Use `extractVersion` when upstream tags need normalization; the ARG must already contain the normalized value. The regex must capture a named `version` group.
+- Keep extraction metadata beside the ARG. Use `packageRules` for update policy such as schedules, release-age delays and automerge.
+- After adding or changing a comment, verify its extracted dependency, current value and version lookup against the current files with Renovate `--platform=local`. Use a temporary indexed copy for untracked files; keep the working repository's index unchanged. A dry-run cloning GitHub does not validate uncommitted changes.
+
 When modifying the Renovate configuration (located at `.github/renovate.json`), you **MUST** validate and dry-run the changes locally before committing. This is critical.
 
 ### 1. Validate Config Syntax
