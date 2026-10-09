@@ -1,4 +1,4 @@
-FROM node:25-trixie-slim AS node
+FROM node:24-trixie-slim AS node
 
 FROM debian:trixie-slim AS download
 
