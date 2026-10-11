@@ -9,6 +9,15 @@
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
   "minimumReleaseAge": "7 days",
+  "customDatasources": {
+    "k3sStable": {
+      "defaultRegistryUrlTemplate": "https://update.k3s.io/v1-release/channels",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\":[{\"version\": $$.(data[id = 'stable'].latest),\"sourceUrl\":\"https://github.com/k3s-io/k3s\",\"changelogUrl\":$join([\"https://github.com/k3s-io/k3s/releases/tag/\",data[id = 'stable'].latest])}],\"homepage\":\"https://k3s.io/\",\"sourceUrl\":\"https://github.com/k3s-io/k3s\"}"
+      ]
+    }
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -35,6 +44,12 @@
       "automerge": true,
       "automergeType": "branch",
       "platformAutomerge": false
+    },
+    {
+      "matchDatasources": ["custom.k3sStable"],
+      "matchPackageNames": ["k3s-io/k3s"],
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false
     },
     {
       "matchPackageNames": [

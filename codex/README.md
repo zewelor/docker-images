@@ -27,10 +27,14 @@ wrapper forwards shutdown signals and drains logs before returning the server st
   The runtime stays on Python slim. Node development headers and Yarn are omitted.
 - Python is available as both `python` and `python3`. Create project environments
   with `python -m venv .venv` and install dependencies with `.venv/bin/pip`.
-- Download kubectl from the upstream stable release, as in the Hermes image,
-  and verify its SHA-256 before copying it into the runtime. The image contains
-  no kubeconfig or Kubernetes credentials; the runtime owns access and RBAC.
-  Verify client/server minor-version compatibility before deploying a rebuilt image.
+- `KUBECTL_VERSION` tracks the Kubernetes version in K3s's `stable` channel through
+  Renovate's `custom.k3sStable` datasource, using the same channel API as the Ansible
+  repository. The `v` prefix and `+k3sN` suffix are removed for the upstream kubectl
+  download; K3s-only rebuilds do not update the client. SHA-256 verification remains.
+  Patch updates follow the repository's CI-gated automerge; minor/major changes
+  require review to coordinate with cluster upgrades. The channel does not inspect
+  the running cluster, so verify client/server compatibility before deployment.
+  The image contains no kubeconfig or Kubernetes credentials; the runtime owns access and RBAC.
 
 The desktop starts `codex app-server` over SSH; no separate service or port is
 needed. For terminal use, run `codex --no-daemon`. The managed daemon requires
