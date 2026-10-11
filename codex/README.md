@@ -2,7 +2,7 @@
 
 For ChatGPT desktop connections over SSH. Official `python:3-slim-trixie` base,
 native Codex, Python 3 with pip and venv, Node.js 24 with npm/npx, curl,
-Dropbear, Git, OpenSSH client and tmux. Runs as UID/GID `1000:1000`
+Dropbear, Git, OpenSSH client, tmux and kubectl. Runs as UID/GID `1000:1000`
 with Bash as the login shell. Dropbear accepts keys only on port `2222`.
 
 Connection logs omit TCP connect/disconnect noise before authentication. Successful
@@ -27,6 +27,10 @@ wrapper forwards shutdown signals and drains logs before returning the server st
   The runtime stays on Python slim. Node development headers and Yarn are omitted.
 - Python is available as both `python` and `python3`. Create project environments
   with `python -m venv .venv` and install dependencies with `.venv/bin/pip`.
+- Download kubectl from the upstream stable release, as in the Hermes image,
+  and verify its SHA-256 before copying it into the runtime. The image contains
+  no kubeconfig or Kubernetes credentials; the runtime owns access and RBAC.
+  Verify client/server minor-version compatibility before deploying a rebuilt image.
 
 The desktop starts `codex app-server` over SSH; no separate service or port is
 needed. For terminal use, run `codex --no-daemon`. The managed daemon requires
@@ -96,7 +100,7 @@ cd codex && just
 
 Smoke requires Docker, `ssh-keygen` and Python 3 on the test host. It checks SSH
 access restrictions, the Bash login shell, Python/pip/venv, curl and Node/npm/npx over
-SSH, app-server commands and code-mode execution over SSH, plus home/state/host-key
+SSH, kubectl client startup over SSH, app-server commands and code-mode execution over SSH, plus home/state/host-key
 persistence across replacement, filtered TCP probes, startup errors and shutdown
 with an active SSH session. It installs a local npm package and runs its CLI with
 npx as UID 1000, without registry access. It also checks that a tmux job survives

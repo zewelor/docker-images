@@ -58,7 +58,7 @@ docker exec "$container" /bin/bash -c 'for attempt in 1 2 3; do exec 3<>/dev/tcp
 ssh_command 'set -eu; test -n "${BASH_VERSION:-}"; test "$SHELL" = /bin/bash; bash --version'
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
-ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version; node --version; npm --version; npx --version'
+ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version; node --version; npm --version; npx --version; kubectl version --client'
 
 # A real SSH disconnect must leave the terminal job available for reattachment.
 python3 - "$container" <<'PY'

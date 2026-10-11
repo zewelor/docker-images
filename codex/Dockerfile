@@ -25,6 +25,17 @@ RUN set -eu; \
     tar -xzf /tmp/codex.tar.gz -C /opt/codex; \
     rm -rf /opt/codex/codex-resources/voice
 
+RUN set -eu; \
+    kubectl_version="$(curl -fsSL --retry 3 https://dl.k8s.io/release/stable.txt)"; \
+    curl -fsSL --retry 3 -o /usr/local/bin/kubectl \
+        "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${TARGETARCH}/kubectl"; \
+    curl -fsSL --retry 3 -o /tmp/kubectl.sha256 \
+        "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${TARGETARCH}/kubectl.sha256"; \
+    printf '%s  /usr/local/bin/kubectl\n' "$(cat /tmp/kubectl.sha256)" > /tmp/kubectl.checksum; \
+    sha256sum -c /tmp/kubectl.checksum; \
+    chmod +x /usr/local/bin/kubectl; \
+    rm /tmp/kubectl.sha256 /tmp/kubectl.checksum
+
 FROM python:3-slim-trixie
 
 # Package versions intentionally track Debian updates.
@@ -36,6 +47,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=download /opt/codex /opt/codex
+COPY --from=download /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
