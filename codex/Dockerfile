@@ -4,6 +4,8 @@ FROM debian:trixie-slim AS download
 
 # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>\d+\.\d+\.\d+)$
 ARG CODEX_VERSION=0.161.0
+# renovate: datasource=custom.k3sStable depName=k3s-io/k3s versioning=semver extractVersion=^v(?<version>\d+\.\d+\.\d+)\+k3s\d+$
+ARG KUBECTL_VERSION=1.36.5
 ARG TARGETARCH
 
 # Package versions intentionally track Debian updates.
@@ -26,11 +28,10 @@ RUN set -eu; \
     rm -rf /opt/codex/codex-resources/voice
 
 RUN set -eu; \
-    kubectl_version="$(curl -fsSL --retry 3 https://dl.k8s.io/release/stable.txt)"; \
     curl -fsSL --retry 3 -o /usr/local/bin/kubectl \
-        "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${TARGETARCH}/kubectl"; \
+        "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl"; \
     curl -fsSL --retry 3 -o /tmp/kubectl.sha256 \
-        "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${TARGETARCH}/kubectl.sha256"; \
+        "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl.sha256"; \
     printf '%s  /usr/local/bin/kubectl\n' "$(cat /tmp/kubectl.sha256)" > /tmp/kubectl.checksum; \
     sha256sum -c /tmp/kubectl.checksum; \
     chmod +x /usr/local/bin/kubectl; \
