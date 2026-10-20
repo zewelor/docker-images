@@ -55,8 +55,8 @@
       "matchPackageNames": [
         "nousresearch/hermes-agent"
       ],
-      "schedule": ["* 0-3 * * 0"],
-      "automergeSchedule": ["* 0-3 * * 0"],
+      "schedule": ["* * * * 0"],
+      "automergeSchedule": ["* * * * 0"],
       "updateNotScheduled": false
     },
     {
