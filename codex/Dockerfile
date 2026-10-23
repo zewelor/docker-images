@@ -3,7 +3,7 @@ FROM node:24-trixie-slim AS node
 FROM debian:trixie-slim AS download
 
 # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>\d+\.\d+\.\d+)$
-ARG CODEX_VERSION=0.162.1
+ARG CODEX_VERSION=0.163.0
 # renovate: datasource=custom.k3sStable depName=k3s-io/k3s versioning=semver extractVersion=^v(?<version>\d+\.\d+\.\d+)\+k3s\d+$
 ARG KUBECTL_VERSION=1.36.5
 ARG TARGETARCH
