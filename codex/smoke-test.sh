@@ -6,6 +6,7 @@ test_dir="$(mktemp -d)"
 container=""
 home_volume=""
 host_keys_volume=""
+ssh_directory_volume=""
 
 cleanup() {
     status=$?
@@ -13,7 +14,7 @@ cleanup() {
         if (( status != 0 )); then docker logs "$container" >&2 || true; fi
         docker rm -f "$container" >/dev/null || true
     fi
-    for volume in "$home_volume" "$host_keys_volume"; do
+    for volume in "$home_volume" "$host_keys_volume" "$ssh_directory_volume"; do
         if [[ -n "$volume" ]]; then docker volume rm "$volume" >/dev/null || true; fi
     done
     rm -rf "$test_dir"
@@ -439,11 +440,19 @@ echo 'PASS: TCP probe noise filtered, auth logs preserved, active SSH shutdown c
 docker rm "$container" >/dev/null
 container=""
 # Mount the entire SSH directory read-only, as with a Kubernetes Secret/ConfigMap.
-mkdir -m 755 "$test_dir/ssh"
-cp "$test_dir/client.pub" "$test_dir/ssh/authorized_keys"
-start_server "type=bind,src=$test_dir/ssh,dst=/home/codex/.ssh,readonly"
+# Create it inside Docker so its owner is root regardless of the host user's UID.
+ssh_directory_volume="$(docker volume create)"
+docker run --rm --network none --user 0:0 \
+    --mount "type=volume,src=$ssh_directory_volume,dst=/ssh,volume-nocopy" \
+    --mount "type=bind,src=$test_dir/client.pub,dst=/client.pub,readonly" \
+    "$image_tag" sh -ec '
+    cp /client.pub /ssh/authorized_keys
+    chown 0:0 /ssh /ssh/authorized_keys
+    chmod 755 /ssh
+    chmod 644 /ssh/authorized_keys'
+start_server "type=volume,src=$ssh_directory_volume,dst=/home/codex/.ssh,readonly,volume-nocopy"
 # shellcheck disable=SC2016
-ssh_command 'test "$(stat -c %a ~/.ssh)" = 755'
+ssh_command 'test "$(stat -c %u:%a ~/.ssh)" = 0:755'
 echo 'PASS: SSH authenticates with a read-only .ssh directory mount'
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(cat ~/project.txt)" = persisted; test "$(cat ~/.codex/smoke-state)" = persisted'
