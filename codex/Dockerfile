@@ -4,6 +4,8 @@ FROM debian:trixie-slim AS download
 
 # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>\d+\.\d+\.\d+)$
 ARG CODEX_VERSION=0.164.0
+# renovate: datasource=github-releases depName=herdrdev/herdr
+ARG HERDR_VERSION=0.9.5
 # renovate: datasource=custom.k3sStable depName=k3s-io/k3s versioning=semver extractVersion=^v(?<version>\d+\.\d+\.\d+)\+k3s\d+$
 ARG KUBECTL_VERSION=1.36.5
 ARG TARGETARCH
@@ -37,6 +39,35 @@ RUN set -eu; \
     chmod +x /usr/local/bin/kubectl; \
     rm /tmp/kubectl.sha256 /tmp/kubectl.checksum
 
+RUN set -eu; \
+    case "$TARGETARCH" in \
+        amd64) arch=x86_64 ;; \
+        arm64) arch=aarch64 ;; \
+        *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL --retry 3 -o /usr/local/bin/herdr \
+        "https://github.com/herdrdev/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${arch}"; \
+    chmod +x /usr/local/bin/herdr
+
+FROM golang:1-trixie AS plugins
+
+# renovate: datasource=github-releases depName=kryptamine/herdr-auto-title
+ARG HERDR_AUTO_TITLE_VERSION=0.14.0
+# renovate: datasource=github-releases depName=persiyanov/herdr-reviewr
+ARG HERDR_REVIEWR_VERSION=0.48.0
+
+COPY --from=download /usr/local/bin/herdr /usr/local/bin/herdr
+
+RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex
+
+ENV HOME=/home/codex
+USER 1000:1000
+WORKDIR /home/codex
+
+# Auto Title needs Go only while installing.
+RUN herdr plugin install kryptamine/herdr-auto-title --ref "v${HERDR_AUTO_TITLE_VERSION}" --yes \
+    && herdr plugin install persiyanov/herdr-reviewr --ref "v${HERDR_REVIEWR_VERSION}" --yes
+
 FROM python:3-slim-trixie
 
 # Package versions intentionally track Debian updates.
@@ -49,6 +80,7 @@ RUN apt-get update \
 
 COPY --from=download /opt/codex /opt/codex
 COPY --from=download /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --from=download /usr/local/bin/herdr /usr/local/bin/herdr
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 
@@ -62,7 +94,11 @@ RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
+COPY --from=plugins /home/codex/.config/herdr/plugins/github-installations/herdr.auto-title-*/*/checkout/ /opt/herdr/plugins/auto-title/
+COPY --from=plugins /home/codex/.config/herdr/plugins/github-installations/persiyanov.reviewr-*/*/checkout/ /opt/herdr/plugins/reviewr/
+
 COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
+COPY --chmod=755 entrypoint.sh /usr/local/bin/codex-entrypoint
 COPY tmux.conf /etc/tmux.conf
 
 ENV HOME=/home/codex \
@@ -72,4 +108,4 @@ USER 1000:1000
 WORKDIR /home/codex
 EXPOSE 2222
 
-CMD ["/usr/local/bin/dropbear-entrypoint", "-F", "-E", "-R", "-s", "-w", "-p", "2222"]
+CMD ["/usr/local/bin/codex-entrypoint"]

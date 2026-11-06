@@ -20,7 +20,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Exercise the exact packaged entrypoint, with synthetic services and credentials.
+docker run --rm --network none "$image_tag" cat /usr/local/bin/codex-entrypoint > "$test_dir/entrypoint.sh"
+python3 "$(dirname "$0")/entrypoint-test.py" "$test_dir/entrypoint.sh"
 docker run --rm --network none "$image_tag" codex --version
+docker run --rm --network none "$image_tag" codex remote-control --no-daemon --help >/dev/null
+docker run --rm --network none "$image_tag" herdr --version
 
 ssh-keygen -q -t ed25519 -N '' -f "$test_dir/client"
 ssh-keygen -q -t ed25519 -N '' -f "$test_dir/untrusted"
@@ -28,12 +33,36 @@ chmod 644 "$test_dir/client.pub"
 home_volume="$(docker volume create)"
 host_keys_volume="$(docker volume create)"
 
+# Populate home before startup, as on an existing Kubernetes PVC; skip image seeding.
+docker run --rm --network none --user 0:0 \
+    --mount "type=volume,src=$home_volume,dst=/home,volume-nocopy" \
+    "$image_tag" sh -ec '
+    mkdir -p /home/codex/.codex \
+        /home/codex/.config/herdr/plugins/config/persiyanov.reviewr \
+        /home/codex/smoke-plugin /home/codex/old-auto-title
+    printf "%s\n" preserved > /home/codex/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings
+    printf "%s\n" "id = \"smoke.user\"" "name = \"User plugin\"" \
+        "version = \"0.1.0\"" "min_herdr_version = \"0.9.5\"" > /home/codex/smoke-plugin/herdr-plugin.toml
+    printf "%s\n" "id = \"herdr.auto-title\"" "name = \"Old Auto Title\"" \
+        "version = \"0.1.0\"" "min_herdr_version = \"0.9.5\"" > /home/codex/old-auto-title/herdr-plugin.toml
+    chown -R 1000:1000 /home/codex
+    chmod 700 /home/codex
+    mkdir -m 755 /home/codex/.ssh'
+docker run --rm --network none --mount "type=volume,src=$home_volume,dst=/home,volume-nocopy" \
+    "$image_tag" sh -ec 'herdr plugin link /home/codex/smoke-plugin --disabled; herdr plugin link /home/codex/old-auto-title --disabled'
+printf '%s\n' '[ui]' 'prompt_new_tab_name = false' > "$test_dir/herdr-config.toml"
+chmod 644 "$test_dir/herdr-config.toml"
+
 start_server() {
+    local ssh_mount="${1:-type=bind,src=$test_dir/client.pub,dst=/home/codex/.ssh/authorized_keys,readonly}"
     container="$(docker run -d --network none --read-only --tmpfs /tmp:mode=1777 --cap-drop ALL \
         --security-opt no-new-privileges \
-        --mount "type=volume,src=$home_volume,dst=/home/codex" \
+        --env HERDR_CONFIG_PATH=/etc/herdr/config.toml \
+        --env MCP_AUTH_TOKEN=synthetic-mcp-token \
+        --mount "type=volume,src=$home_volume,dst=/home,volume-nocopy" \
         --mount "type=volume,src=$host_keys_volume,dst=/etc/dropbear" \
-        --mount "type=bind,src=$test_dir/client.pub,dst=/home/codex/.ssh/authorized_keys,readonly" \
+        --mount "$ssh_mount" \
+        --mount "type=bind,src=$test_dir/herdr-config.toml,dst=/etc/herdr/config.toml,readonly" \
         "$image_tag")"
     docker exec -i "$container" sh -c 'umask 077; cat > /tmp/client-key' < "$test_dir/client"
     for ((attempt = 0; attempt < 30; attempt++)); do
@@ -52,6 +81,13 @@ ssh_command() {
 }
 
 start_server
+# shellcheck disable=SC2016
+ssh_command 'test "$(stat -c %u:%a ~/.ssh)" = 0:755'
+echo 'PASS: SSH authenticates with a root-owned 0755 .ssh directory'
+# Test credential inheritance through real SSH; the token is synthetic and stays out of output.
+# shellcheck disable=SC2016
+ssh_command 'test "$MCP_AUTH_TOKEN" = synthetic-mcp-token'
+echo 'PASS: synthetic MCP credential inherited through real SSH'
 # TCP health checks must not produce unauthenticated connection noise.
 docker exec "$container" /bin/bash -c 'for attempt in 1 2 3; do exec 3<>/dev/tcp/127.0.0.1/2222; IFS= read -r -t 2 banner <&3; exec 3<&-; exec 3>&-; done'
 # shellcheck disable=SC2016
@@ -59,6 +95,44 @@ ssh_command 'set -eu; test -n "${BASH_VERSION:-}"; test "$SHELL" = /bin/bash; ba
 # Expand these expressions inside the remote shell.
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; python --version; python3 --version; python -m pip --version; curl --version; node --version; npm --version; npx --version; kubectl version --client'
+
+check_herdr_plugins() {
+python3 - "$container" <<'PY'
+import json
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+
+ssh = ["docker", "exec", sys.argv[1], "ssh", "-p", "2222", "-i", "/tmp/client-key",
+       "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+       "-o", "UserKnownHostsFile=/tmp/known_hosts", "codex@127.0.0.1"]
+response = subprocess.check_output(ssh + ["herdr plugin list --json"], text=True)
+plugins = {plugin["plugin_id"]: plugin for plugin in json.loads(response)["result"]["plugins"]}
+assert not plugins["smoke.user"]["enabled"], plugins["smoke.user"]
+for plugin_id, (root, executable) in {
+    "herdr.auto-title": ("/opt/herdr/plugins/auto-title", "herdr-auto-title"),
+    "persiyanov.reviewr": ("/opt/herdr/plugins/reviewr", "bin/herdr-reviewr"),
+}.items():
+    plugin = plugins[plugin_id]
+    assert plugin["plugin_root"] == root, plugin
+    assert plugin["enabled"], plugin
+    assert not plugin.get("warnings"), plugin
+    assert plugin["source"]["kind"] == "local", plugin
+    binary = str(Path(plugin["plugin_root"]) / executable)
+    subprocess.run(ssh + [shlex.join(["test", "-x", binary])], check=True)
+    if plugin_id == "persiyanov.reviewr":
+        # With no worktree event, this hook runs without opening a terminal UI.
+        subprocess.run(ssh + [shlex.join([binary, "--action", "auto-open"])], check=True)
+print("PASS: image plugins replace old registrations on an existing home; user plugin stays disabled")
+PY
+}
+check_herdr_plugins
+# shellcheck disable=SC2016
+ssh_command 'test "$(cat ~/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings)" = preserved'
+# shellcheck disable=SC2016
+ssh_command 'cat "$HERDR_CONFIG_PATH"' > "$test_dir/herdr-config-after.toml"
+cmp "$test_dir/herdr-config.toml" "$test_dir/herdr-config-after.toml"
 
 # A real SSH disconnect must leave the terminal job available for reattachment.
 python3 - "$container" <<'PY'
@@ -364,14 +438,24 @@ echo 'PASS: TCP probe noise filtered, auth logs preserved, active SSH shutdown c
 
 docker rm "$container" >/dev/null
 container=""
-start_server
+# Mount the entire SSH directory read-only, as with a Kubernetes Secret/ConfigMap.
+mkdir -m 755 "$test_dir/ssh"
+cp "$test_dir/client.pub" "$test_dir/ssh/authorized_keys"
+start_server "type=bind,src=$test_dir/ssh,dst=/home/codex/.ssh,readonly"
+# shellcheck disable=SC2016
+ssh_command 'test "$(stat -c %a ~/.ssh)" = 755'
+echo 'PASS: SSH authenticates with a read-only .ssh directory mount'
 # shellcheck disable=SC2016
 ssh_command 'set -eu; test "$(cat ~/project.txt)" = persisted; test "$(cat ~/.codex/smoke-state)" = persisted'
+check_herdr_plugins
+# shellcheck disable=SC2016
+ssh_command 'test "$(cat ~/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings)" = preserved'
 test "$host_key" = "$(docker exec "$container" sha256sum /etc/dropbear/dropbear_ed25519_host_key)"
 echo 'PASS: non-root SSH, unauthorized/root login rejection, home/Codex state and host-key persistence'
 
 # A fatal startup error must stay visible and retain a nonzero status.
-if docker run --rm --network none --read-only "$image_tag" /usr/local/bin/dropbear-entrypoint -F -E -r /missing-host-key -p 2222 > "$test_dir/startup-error.log" 2>&1; then
+if docker run --rm --network none --read-only --tmpfs /home/codex:uid=1000,gid=1000,mode=700 \
+    "$image_tag" /usr/local/bin/dropbear-entrypoint -F -E -r /missing-host-key -p 2222 > "$test_dir/startup-error.log" 2>&1; then
     echo 'ERROR: Dropbear accepted missing host keys' >&2
     exit 1
 fi

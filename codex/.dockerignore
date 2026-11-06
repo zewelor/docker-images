@@ -2,4 +2,5 @@
 !Dockerfile
 !.dockerignore
 !dropbear-entrypoint.sh
+!entrypoint.sh
 !tmux.conf

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 # Keep auth/errors; the marker drains logs even while SSH children hold stderr open.
 exec 3> >(sed -u -E '/^__DROPBEAR_LOG_END__$/Q; / Child connection from /d; / Exit before auth from <[^>]+>: Exited normally$/d' >&2)
 filter_pid=$!
