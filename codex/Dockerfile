@@ -54,7 +54,7 @@ FROM golang:1-trixie AS plugins
 # renovate: datasource=github-releases depName=kryptamine/herdr-auto-title
 ARG HERDR_AUTO_TITLE_VERSION=0.14.0
 # renovate: datasource=github-releases depName=persiyanov/herdr-reviewr
-ARG HERDR_REVIEWR_VERSION=0.48.0
+ARG HERDR_REVIEWR_VERSION=0.49.0
 
 COPY --from=download /usr/local/bin/herdr /usr/local/bin/herdr
 
