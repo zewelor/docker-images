@@ -32,6 +32,20 @@ Reusable workflows serialize publication per image across both paths. Active run
 finish; the newest pending run replaces any older pending run. Different images
 can still build in parallel, and non-publishing runs use separate locks per ref.
 
+## Local workflow checks
+
+[pre-commit](.pre-commit-config.yaml) runs actionlint only for staged YAML files
+under `.github/workflows/`; unrelated changes are skipped. It installs the pinned
+actionlint version in an isolated Go environment, so actionlint does not need a
+separate system installation.
+
+Enable the Git hook once per checkout, then check all workflows when needed:
+
+```sh
+pre-commit install
+pre-commit run actionlint --all-files
+```
+
 ## Adding or changing images
 
 - **Standard Alpine/Debian-based Images**: To add a new image:
