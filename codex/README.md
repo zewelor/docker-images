@@ -1,9 +1,11 @@
 # Codex with SSH and Remote Control
 
-For ChatGPT desktop connections over SSH. Official `python:3-slim-trixie` base,
-native Codex, Python 3 with pip and venv, Node.js 24 with npm/npx, curl,
+For ChatGPT desktop connections over SSH. Official Python slim base,
+native Codex, Python with pip and venv, Node.js with npm/npx, curl,
 Dropbear, Git, OpenSSH client, tmux, kubectl and Herdr. Runs as UID/GID `1000:1000`
 with Bash as the login shell. Dropbear accepts keys only on port `2222`.
+
+Tool versions and base image tags are defined in the [Dockerfile](Dockerfile).
 
 Connection logs omit TCP connect/disconnect noise before authentication. Successful
 logins, authentication failures and server errors remain on stderr. The Bash/sed
@@ -38,7 +40,7 @@ versions from the Dockerfile rather than fetching the latest tool releases at st
   Codex discovers them through the package layout. The bundled zsh serves internal
   execution; SSH login uses Bash already provided by the base image.
 - `codex-code-mode-host` embeds V8; it needs no separate JavaScript installation.
-- Copy the Node binary and npm from official `node:24-trixie-slim`; expose npm
+- Copy the Node binary and npm from the official Node slim image; expose npm
   and npx in `PATH` for JavaScript projects and local MCP servers launched by npx.
   The runtime stays on Python slim. Node development headers and Yarn are omitted.
 - Python is available as both `python` and `python3`. Create project environments
