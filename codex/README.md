@@ -9,6 +9,22 @@ Connection logs omit TCP connect/disconnect noise before authentication. Success
 logins, authentication failures and server errors remain on stderr. The Bash/sed
 wrapper forwards shutdown signals and drains logs before returning the server status.
 
+## Automatic updates
+
+[Renovate](../.github/renovate.json) groups all dependencies declared in this image's
+[Dockerfile](Dockerfile) into one update branch, including Codex, Herdr, both Herdr
+plugins, kubectl and base images. New branches are created only
+on the 1st and 15th of each month in Europe/Lisbon: windows are 14–17 days apart.
+Existing branches can be updated and automerged outside those windows once checks pass.
+The repository's seven-day release-age delay still applies.
+A kubectl minor or major upgrade keeps the entire group subject
+to manual review under the existing policy.
+
+Codex remains part of the [shared weekly rebuild](../.github/workflows/image.yml).
+Source changes, shared workflow changes and manual builds continue to run immediately;
+the Renovate schedule does not delay operator fixes. Each build uses the pinned tool
+versions from the Dockerfile rather than fetching the latest tool releases at startup.
+
 ## Package decisions
 
 - Copy all of `/opt/codex` recursively, preserving metadata and future upstream files.

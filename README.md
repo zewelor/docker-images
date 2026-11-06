@@ -4,8 +4,8 @@
 This repo intentionally optimizes for simplicity.
 
 [`codex`](codex/README.md) provides a native Codex binary with non-root, key-only SSH
-for terminal use and desktop remote connections. Renovate maintains the Codex
-release version from its Dockerfile comment.
+for terminal use and desktop remote connections. Renovate maintains its Dockerfile dependencies as a single twice-monthly group;
+see the [Codex update policy](codex/README.md#automatic-updates).
 
 - Package versions are not pinned on purpose.
 - Base images and GitHub Actions are not pinned on purpose.

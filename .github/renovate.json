@@ -52,6 +52,15 @@
       "automerge": false
     },
     {
+      "description": "Batch all Codex image dependency updates on the 1st and 15th of each month",
+      "matchFileNames": ["codex/Dockerfile"],
+      "groupName": "codex image dependencies",
+      "separateMajorMinor": false,
+      "separateMinorPatch": false,
+      "separateMultipleMajor": false,
+      "schedule": ["* * 1,15 * *"]
+    },
+    {
       "matchPackageNames": [
         "nousresearch/hermes-agent"
       ],
