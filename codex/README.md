@@ -18,7 +18,8 @@ wrapper forwards shutdown signals and drains logs before returning the server st
 plugins, kubectl and base images. New branches are created only
 on the 1st and 15th of each month in Europe/Lisbon: windows are 14–17 days apart.
 Existing branches can be updated and automerged outside those windows once checks pass.
-The repository's seven-day release-age delay still applies.
+The repository's seven-day release-age delay applies except to kubectl: the K3s
+stable datasource does not provide a release timestamp.
 A kubectl minor or major upgrade keeps the entire group subject
 to manual review under the existing policy.
 

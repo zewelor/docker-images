@@ -46,6 +46,11 @@
       "platformAutomerge": false
     },
     {
+      "description": "The K3s stable datasource does not provide a release timestamp",
+      "matchDatasources": ["custom.k3sStable"],
+      "minimumReleaseAge": null
+    },
+    {
       "matchDatasources": ["custom.k3sStable"],
       "matchPackageNames": ["k3s-io/k3s"],
       "matchUpdateTypes": ["minor", "major"],
