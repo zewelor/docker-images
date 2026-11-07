@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Behavioral checks for the single-container SSH and Remote Control entrypoint."""
+import json
 import os
 import signal
 import subprocess
@@ -12,7 +13,7 @@ from pathlib import Path
 ENTRYPOINT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name("entrypoint.sh")
 
 STUB = r'''#!/usr/bin/env python3
-import os, signal, sys, time
+import json, os, signal, sys, time
 from pathlib import Path
 
 name = Path(sys.argv[0]).name
@@ -23,6 +24,13 @@ def record(path, value=""):
     (state / path).write_text(value)
 
 if name == "herdr":
+    registry = state / "plugins.json"
+    plugins = json.loads(registry.read_text()) if registry.exists() else []
+    if sys.argv[1:3] == ["plugin", "list"]:
+        print(json.dumps({"result": {"plugins": plugins}}))
+    elif sys.argv[1:3] == ["plugin", "uninstall"]:
+        plugins = [p for p in plugins if p["plugin_id"] != sys.argv[3]]
+        registry.write_text(json.dumps(plugins))
     sys.exit(0)
 if name == "dropbearkey":
     if os.environ.get("FAIL_KEYGEN") == "true":
@@ -143,6 +151,20 @@ def check_remote_only(root):
     assert process.returncode == 0, (out, err)
     assert (state / "codex.stopped").read_text() == str(signal.SIGINT)
     assert not (state / "ssh.ready").exists()
+
+
+def check_removed_plugin(root):
+    state, home, _config, bindir, script = make_harness(root)
+    registry = state / "plugins.json"
+    registry.write_text('[{"plugin_id": "persiyanov.reviewr"}, {"plugin_id": "smoke.user"}]')
+    process = start(script, environment(state, home, bindir, {
+        "SSH_ENABLED": "false", "CODEX_REMOTE_CONTROL_ENABLED": "true",
+    }))
+    try:
+        wait_for(process, required=[state / "codex.ready"])
+        assert json.loads(registry.read_text()) == [{"plugin_id": "smoke.user"}], registry.read_text()
+    finally:
+        finish(process, signal.SIGTERM)
 
 
 def check_ssh_setup(root, combined=False):
@@ -279,6 +301,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="codex-entrypoint-test-") as temporary:
         root = Path(temporary)
         check_remote_only(root / "remote-only")
+        check_removed_plugin(root / "removed-plugin")
         (root / "ssh-only").mkdir()
         check_ssh_setup(root / "ssh-only")
         (root / "combined").mkdir()

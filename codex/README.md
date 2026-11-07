@@ -14,8 +14,8 @@ wrapper forwards shutdown signals and drains logs before returning the server st
 ## Automatic updates
 
 [Renovate](../.github/renovate.json) groups all dependencies declared in this image's
-[Dockerfile](Dockerfile) into one update branch, including Codex, Herdr, both Herdr
-plugins, kubectl and base images. New branches are created only
+[Dockerfile](Dockerfile) into one update branch, including Codex, Herdr, the Auto Title
+plugin, kubectl and base images. New branches are created only
 on the 1st and 15th of each month in Europe/Lisbon: windows are 14–17 days apart.
 Existing branches can be updated and automerged outside those windows once checks pass.
 The repository's seven-day release-age delay applies except to kubectl: the K3s
@@ -47,9 +47,8 @@ versions from the Dockerfile rather than fetching the latest tool releases at st
 - Python is available as both `python` and `python3`. Create project environments
   with `python -m venv .venv` and install dependencies with `.venv/bin/pip`.
 - Herdr is downloaded from its official Linux release for each architecture.
-  Auto Title (`herdr.auto-title`) and reviewr (`persiyanov.reviewr`) are built
-  into `/opt/herdr/plugins/auto-title` and `/opt/herdr/plugins/reviewr`, using
-  the version ARGs in the Dockerfile. Go builds Auto Title in a separate stage;
+  Auto Title (`herdr.auto-title`) is built into `/opt/herdr/plugins/auto-title`,
+  using its version ARG in the Dockerfile. Go builds it in a separate stage;
   the Go toolchain is omitted from the runtime.
   Plugin settings live under `/home/codex/.config/herdr/plugins/config/`.
   Auto Title uses its own `/home/codex/.config/herdr-auto-title/config.env` instead
@@ -80,7 +79,7 @@ Detach with **Ctrl+A, then D** before leaving SSH. Reconnect with
 replacing or restarting the container ends its processes.
 
 Alternatively, run `herdr` over an interactive SSH connection to manage persistent
-workspaces with Auto Title and reviewr. Herdr starts its server on demand; the
+workspaces with Auto Title. Herdr starts its server on demand; the
 image does not start it alongside Dropbear. Its processes survive SSH disconnects,
 but end when the container stops, like tmux.
 
@@ -132,13 +131,15 @@ SSH passes the container environment to authenticated sessions, including an opt
 MCP credential. Treat SSH users as having the container's application identity and do not print
 the environment or token during validation. The runtime owns the listener exposure and credentials.
 
-The default entrypoint registers and enables both bundled plugins with
-`herdr plugin link` before starting the selected services. Their code stays in `/opt`, so an
+The default entrypoint registers and enables the bundled Auto Title plugin with
+`herdr plugin link` before starting the selected services. Its code stays in `/opt`, so an
 existing home volume or Kubernetes PVC does not hide it. Registration uses only
 local files, with no downloads or compilation at startup; a registration failure
 stops startup and reports the error. Image upgrades supply the new plugin code.
-The image owns these two plugin registrations; startup replaces older paths and
-re-enables them. Other plugin registrations and user settings are preserved.
+The image owns the Auto Title registration; startup replaces older paths and
+re-enables it. Startup also unregisters the retired reviewr plugin from existing
+homes without deleting its settings. Other plugin registrations and user settings
+are preserved.
 
 Herdr's registry and runtime data stay in the writable home. For externally
 managed settings, mount `/etc/herdr/config.toml` as a single read-only file and
