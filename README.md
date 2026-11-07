@@ -32,6 +32,15 @@ Reusable workflows serialize publication per image across both paths. Active run
 finish; the newest pending run replaces any older pending run. Different images
 can still build in parallel, and non-publishing runs use separate locks per ref.
 
+Publishing runs lint and smoke tests before pushing the image with its tags,
+then generates GitHub build provenance for the pushed digest. An attestation
+failure fails the workflow; the pushed image and tags remain available.
+Only runs on `main` publish, including manual runs. Manual runs on other refs
+verify the build without publishing. Retry a failed current run normally; to
+rebuild after newer commits, start a new manual run from `main` instead of
+rerunning a historical run. Serialization does not guarantee commit order for
+moving tags such as `latest`.
+
 Ruby's slim SHA tag is `<sha>` and its distroless SHA tag is `<sha>-distroless`.
 
 ## Local workflow checks

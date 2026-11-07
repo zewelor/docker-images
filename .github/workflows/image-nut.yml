@@ -33,6 +33,6 @@ jobs:
     uses: ./.github/workflows/reusable-build-image.yml
     with:
       image_name: nut
-      publish: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
     secrets: inherit

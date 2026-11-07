@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/reusable-build-image.yml
     with:
       image_name: ${{ matrix.image_name }}
-      publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       cache_qemu: false
       needs_dhi_login: ${{ matrix.image_name != 'codex' && matrix.image_name != 'hermes-agent' }}
@@ -60,7 +60,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     uses: ./.github/workflows/reusable-ruby-image.yml
     with:
-      publish: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      publish: ${{ github.ref == 'refs/heads/main' }}
       use_cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       cache_qemu: false
     secrets: inherit
