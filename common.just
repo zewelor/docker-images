@@ -9,7 +9,7 @@ _build-alpine image_name:
 # Build Ruby-based image
 [private]
 _build-ruby image_name:
-    docker build --pull -t {{image_name}} .
+    docker build --pull --target base -t {{image_name}} .
 
 # Build Debian-based image
 [private]

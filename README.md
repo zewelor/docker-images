@@ -32,6 +32,8 @@ Reusable workflows serialize publication per image across both paths. Active run
 finish; the newest pending run replaces any older pending run. Different images
 can still build in parallel, and non-publishing runs use separate locks per ref.
 
+Ruby's slim SHA tag is `<sha>` and its distroless SHA tag is `<sha>-distroless`.
+
 ## Local workflow checks
 
 [pre-commit](.pre-commit-config.yaml) runs actionlint only for staged YAML files

@@ -206,7 +206,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/ruby
           tags: |
             # full length sha
-            type=sha,format=long,prefix=
+            type=sha,format=long,prefix=,suffix=-distroless
             type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ needs.latest-ruby.outputs.version }}-${{ needs.smoke.outputs.distroless_codename }}-distroless
             type=raw,enable=true,priority=300,prefix=,suffix=,value=latest-${{ needs.smoke.outputs.distroless_codename }}-distroless
       - name: Set up Docker Buildx
