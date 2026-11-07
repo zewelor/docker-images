@@ -74,6 +74,7 @@ def make_harness(root):
     script = ENTRYPOINT.read_text()
     script = script.replace("/usr/local/bin/dropbear-entrypoint", str(bindir / "ssh-wrapper"))
     script = script.replace("/usr/sbin/dropbear", str(bindir / "ssh-wrapper"))
+    script = script.replace("sleep 30 &", "sleep 0.2 &")
     script = script.replace("/home/codex", str(home)).replace("/etc/codex", str(config))
     runnable = root / "entrypoint-under-test.sh"
     runnable.write_text(script)
@@ -267,7 +268,7 @@ def check_remaining_failures(root):
 
 def check_shutdown_and_sibling_exit(root):
     cases = [(signal.SIGTERM, None, None), (signal.SIGINT, None, None)]
-    cases += [(None, service, code) for service in ("codex", "ssh") for code in (0, 19)]
+    cases += [(None, "ssh", code) for code in (0, 19)]
     for index, (external_signal, exiting, exit_code) in enumerate(cases):
         case = root / str(index)
         state, home, _config, bindir, script = make_harness(case)
@@ -297,6 +298,46 @@ def check_shutdown_and_sibling_exit(root):
             finish(process)
 
 
+def check_remote_failure_recovers(root):
+    state, home, _config, bindir, script = make_harness(root)
+    ssh_dir = home / ".ssh"
+    ssh_dir.mkdir()
+    (ssh_dir / "authorized_keys").write_text("ssh-ed25519 synthetic-key test\n")
+    process = start(script, environment(state, home, bindir, {
+        "SSH_ENABLED": "true", "CODEX_REMOTE_CONTROL_ENABLED": "true",
+        "SSH_HOST_KEY": str(root / "host-key"),
+    }))
+    try:
+        wait_for(process, required=[state / "ssh.ready", state / "codex.ready"])
+        first_pid = (state / "codex.ready").read_text()
+        (state / "codex.ready").unlink()
+        (state / "codex.exit").write_text("19")
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and not (state / "codex.ready").exists():
+            assert process.poll() is None, "Remote Control failure stopped SSH"
+            time.sleep(0.01)
+        assert (state / "codex.ready").exists(), "Remote Control was not retried"
+        assert (state / "codex.ready").read_text() != first_pid
+        (state / "codex.exit").unlink()
+        assert process.poll() is None
+    finally:
+        finish(process, signal.SIGTERM)
+
+
+def check_remote_only_failure(root):
+    state, home, _config, bindir, script = make_harness(root)
+    process = start(script, environment(state, home, bindir, {
+        "SSH_ENABLED": "false", "CODEX_REMOTE_CONTROL_ENABLED": "true",
+    }))
+    try:
+        wait_for(process, required=[state / "codex.ready"])
+        (state / "codex.exit").write_text("19")
+        out, err = finish(process)
+        assert process.returncode != 0, (out, err)
+    finally:
+        finish(process)
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="codex-entrypoint-test-") as temporary:
         root = Path(temporary)
@@ -312,6 +353,8 @@ def main():
         check_remaining_failures(root / "failures")
         (root / "shutdown").mkdir()
         check_shutdown_and_sibling_exit(root / "shutdown")
+        check_remote_failure_recovers(root / "retry")
+        check_remote_only_failure(root / "remote-failure")
     print("PASS: entrypoint flags, SSH key handling, Remote Control, shutdown and failures")
 
 

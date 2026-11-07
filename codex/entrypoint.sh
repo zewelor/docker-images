@@ -61,12 +61,14 @@ cd "$HOME"
 
 remote_pid=
 ssh_pid=
+retry_pid=
 # Invoked by the EXIT trap.
 # shellcheck disable=SC2329
 stop() {
     trap '' TERM INT
     [[ -z "$remote_pid" ]] || kill -INT "$remote_pid" 2>/dev/null || true
     [[ -z "$ssh_pid" ]] || kill -TERM "$ssh_pid" 2>/dev/null || true
+    [[ -z "$retry_pid" ]] || kill "$retry_pid" 2>/dev/null || true
     wait || true
 }
 trap 'stop' EXIT
@@ -82,6 +84,32 @@ if [[ "$remote_enabled" == true ]]; then
     remote_pid=$!
     pids+=("$remote_pid")
 fi
-wait -n "${pids[@]}"
-# A selected service exiting, even successfully, requires a container restart.
-exit 1
+if [[ "$ssh_enabled:$remote_enabled" != true:true ]]; then
+    wait -n "${pids[@]}" || true
+    exit 1
+fi
+
+while true; do
+    pids=("$ssh_pid")
+    [[ -z "$remote_pid" ]] || pids+=("$remote_pid")
+    [[ -z "$retry_pid" ]] || pids+=("$retry_pid")
+    exited=
+    status=0
+    wait -n -p exited "${pids[@]}" || status=$?
+    if [[ "$exited" == "$ssh_pid" ]]; then
+        echo "ERROR: SSH exited (status $status)" >&2
+        exit 1
+    elif [[ -n "$remote_pid" && "$exited" == "$remote_pid" ]]; then
+        echo "ERROR: Remote Control exited (status $status); retrying in 30 seconds, SSH remains available" >&2
+        remote_pid=
+        sleep 30 &
+        retry_pid=$!
+    elif [[ -n "$retry_pid" && "$exited" == "$retry_pid" ]]; then
+        retry_pid=
+        codex remote-control --no-daemon &
+        remote_pid=$!
+    else
+        echo "ERROR: unexpected supervisor wait result (status $status)" >&2
+        exit 1
+    fi
+done

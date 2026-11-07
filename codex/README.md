@@ -98,7 +98,12 @@ home and starts the services selected by two independent environment variables:
 Only the literal values `true` and `false` are accepted; invalid values fail before
 initialization. These flags are read at startup, so changing them requires replacing
 the container and ends its processes. The entrypoint forwards shutdown to the selected
-services and stops the container with a nonzero status if either service exits unexpectedly.
+services. In SSH-only or Remote Control-only mode, the container exits with a nonzero
+status if the selected service exits. When both are enabled, SSH failure stops the
+container, while Remote Control failure is logged and retried every 30 seconds with
+SSH still available. A running container therefore does not prove Remote Control is
+connected; check its logs and verify a connection. After a login expires, use SSH to
+run `codex logout` and `codex login --device-auth`; a retry uses the renewed login.
 Remote Control runs in the foreground with the existing Codex login stored in home;
 the image neither creates nor copies operator credentials.
 
