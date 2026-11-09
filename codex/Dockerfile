@@ -49,22 +49,6 @@ RUN set -eu; \
         "https://github.com/herdrdev/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${arch}"; \
     chmod +x /usr/local/bin/herdr
 
-FROM golang:1-trixie AS plugins
-
-# renovate: datasource=github-releases depName=kryptamine/herdr-auto-title
-ARG HERDR_AUTO_TITLE_VERSION=0.14.0
-
-COPY --from=download /usr/local/bin/herdr /usr/local/bin/herdr
-
-RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex
-
-ENV HOME=/home/codex
-USER 1000:1000
-WORKDIR /home/codex
-
-# Auto Title needs Go only while installing.
-RUN herdr plugin install kryptamine/herdr-auto-title --ref "v${HERDR_AUTO_TITLE_VERSION}" --yes
-
 FROM python:3-slim-trixie
 
 # Package versions intentionally track Debian updates.
@@ -90,8 +74,6 @@ RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash codex \
     && ln -s /opt/codex/codex-path/rg /usr/local/bin/rg \
     && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
-
-COPY --from=plugins /home/codex/.config/herdr/plugins/github-installations/herdr.auto-title-*/*/checkout/ /opt/herdr/plugins/auto-title/
 
 COPY --chmod=755 dropbear-entrypoint.sh /usr/local/bin/dropbear-entrypoint
 COPY --chmod=755 entrypoint.sh /usr/local/bin/codex-entrypoint

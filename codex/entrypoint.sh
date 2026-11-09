@@ -47,16 +47,16 @@ if [[ "$ssh_enabled" == true ]]; then
     chmod 600 "$host_key"
 fi
 
-herdr plugin link /opt/herdr/plugins/auto-title
-# Remove the retired bundled plugin from persistent homes, preserving its settings.
-reviewr_installed="$(herdr plugin list --json | python3 -c '
+# Remove retired bundled plugins from persistent homes, preserving their settings.
+retired_plugins="$(herdr plugin list --json | python3 -c '
 import json, sys
 plugins = json.load(sys.stdin)["result"]["plugins"]
-print(any(plugin["plugin_id"] == "persiyanov.reviewr" for plugin in plugins))
+retired = {"herdr.auto-title", "persiyanov.reviewr"}
+print("\n".join(plugin["plugin_id"] for plugin in plugins if plugin["plugin_id"] in retired))
 ')"
-if [[ "$reviewr_installed" == True ]]; then
-    herdr plugin uninstall persiyanov.reviewr
-fi
+while IFS= read -r plugin; do
+    [[ -z "$plugin" ]] || herdr plugin uninstall "$plugin"
+done <<< "$retired_plugins"
 cd "$HOME"
 
 remote_pid=

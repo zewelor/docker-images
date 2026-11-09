@@ -24,6 +24,8 @@ def record(path, value=""):
     (state / path).write_text(value)
 
 if name == "herdr":
+    with (state / "herdr.calls").open("a") as stream:
+        stream.write(" ".join(sys.argv[1:]) + "\n")
     registry = state / "plugins.json"
     plugins = json.loads(registry.read_text()) if registry.exists() else []
     if sys.argv[1:3] == ["plugin", "list"]:
@@ -157,13 +159,14 @@ def check_remote_only(root):
 def check_removed_plugin(root):
     state, home, _config, bindir, script = make_harness(root)
     registry = state / "plugins.json"
-    registry.write_text('[{"plugin_id": "persiyanov.reviewr"}, {"plugin_id": "smoke.user"}]')
+    registry.write_text('[{"plugin_id": "herdr.auto-title"}, {"plugin_id": "persiyanov.reviewr"}, {"plugin_id": "smoke.user"}]')
     process = start(script, environment(state, home, bindir, {
         "SSH_ENABLED": "false", "CODEX_REMOTE_CONTROL_ENABLED": "true",
     }))
     try:
         wait_for(process, required=[state / "codex.ready"])
         assert json.loads(registry.read_text()) == [{"plugin_id": "smoke.user"}], registry.read_text()
+        assert "plugin link" not in (state / "herdr.calls").read_text()
     finally:
         finish(process, signal.SIGTERM)
 

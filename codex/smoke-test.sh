@@ -27,7 +27,7 @@ python3 "$(dirname "$0")/entrypoint-test.py" "$test_dir/entrypoint.sh"
 docker run --rm --network none "$image_tag" codex --version
 docker run --rm --network none "$image_tag" codex remote-control --no-daemon --help >/dev/null
 docker run --rm --network none "$image_tag" herdr --version
-docker run --rm --network none "$image_tag" test ! -e /opt/herdr/plugins/reviewr
+docker run --rm --network none "$image_tag" test ! -e /opt/herdr/plugins
 
 ssh-keygen -q -t ed25519 -N '' -f "$test_dir/client"
 ssh-keygen -q -t ed25519 -N '' -f "$test_dir/untrusted"
@@ -41,8 +41,10 @@ docker run --rm --network none --user 0:0 \
     "$image_tag" sh -ec '
     mkdir -p /home/codex/.codex \
         /home/codex/.config/herdr/plugins/config/persiyanov.reviewr \
+        /home/codex/.config/herdr-auto-title \
         /home/codex/smoke-plugin /home/codex/old-auto-title /home/codex/old-reviewr
     printf "%s\n" preserved > /home/codex/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings
+    printf "%s\n" preserved > /home/codex/.config/herdr-auto-title/config.env
     printf "%s\n" "id = \"smoke.user\"" "name = \"User plugin\"" \
         "version = \"0.1.0\"" "min_herdr_version = \"0.9.5\"" > /home/codex/smoke-plugin/herdr-plugin.toml
     printf "%s\n" "id = \"herdr.auto-title\"" "name = \"Old Auto Title\"" \
@@ -53,7 +55,7 @@ docker run --rm --network none --user 0:0 \
     chmod 700 /home/codex
     mkdir -m 755 /home/codex/.ssh'
 docker run --rm --network none --mount "type=volume,src=$home_volume,dst=/home,volume-nocopy" \
-    "$image_tag" sh -ec 'herdr plugin link /home/codex/smoke-plugin --disabled; herdr plugin link /home/codex/old-auto-title --disabled; herdr plugin link /home/codex/old-reviewr; rm -rf /home/codex/old-reviewr'
+    "$image_tag" sh -ec 'herdr plugin link /home/codex/smoke-plugin --disabled; herdr plugin link /home/codex/old-auto-title --disabled; herdr plugin link /home/codex/old-reviewr; rm -rf /home/codex/old-auto-title /home/codex/old-reviewr'
 printf '%s\n' '[ui]' 'prompt_new_tab_name = false' > "$test_dir/herdr-config.toml"
 chmod 644 "$test_dir/herdr-config.toml"
 
@@ -103,8 +105,6 @@ ssh_command 'set -eu; test "$(id -u)" = 1000; codex --version; git --version; py
 check_herdr_plugins() {
 python3 - "$container" <<'PY'
 import json
-from pathlib import Path
-import shlex
 import subprocess
 import sys
 
@@ -115,22 +115,15 @@ response = subprocess.check_output(ssh + ["herdr plugin list --json"], text=True
 plugins = {plugin["plugin_id"]: plugin for plugin in json.loads(response)["result"]["plugins"]}
 assert not plugins["smoke.user"]["enabled"], plugins["smoke.user"]
 assert "persiyanov.reviewr" not in plugins, plugins
-for plugin_id, (root, executable) in {
-    "herdr.auto-title": ("/opt/herdr/plugins/auto-title", "herdr-auto-title"),
-}.items():
-    plugin = plugins[plugin_id]
-    assert plugin["plugin_root"] == root, plugin
-    assert plugin["enabled"], plugin
-    assert not plugin.get("warnings"), plugin
-    assert plugin["source"]["kind"] == "local", plugin
-    binary = str(Path(plugin["plugin_root"]) / executable)
-    subprocess.run(ssh + [shlex.join(["test", "-x", binary])], check=True)
-print("PASS: Auto Title updated and reviewr removed on existing home; user plugin stays disabled")
+assert "herdr.auto-title" not in plugins, plugins
+print("PASS: retired plugins removed on existing home; user plugin stays disabled")
 PY
 }
 check_herdr_plugins
 # shellcheck disable=SC2016
 ssh_command 'test "$(cat ~/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings)" = preserved'
+# shellcheck disable=SC2016
+ssh_command 'test "$(cat ~/.config/herdr-auto-title/config.env)" = preserved'
 # shellcheck disable=SC2016
 ssh_command 'cat "$HERDR_CONFIG_PATH"' > "$test_dir/herdr-config-after.toml"
 cmp "$test_dir/herdr-config.toml" "$test_dir/herdr-config-after.toml"
@@ -459,6 +452,8 @@ ssh_command 'set -eu; test "$(cat ~/project.txt)" = persisted; test "$(cat ~/.co
 check_herdr_plugins
 # shellcheck disable=SC2016
 ssh_command 'test "$(cat ~/.config/herdr/plugins/config/persiyanov.reviewr/smoke-settings)" = preserved'
+# shellcheck disable=SC2016
+ssh_command 'test "$(cat ~/.config/herdr-auto-title/config.env)" = preserved'
 test "$host_key" = "$(docker exec "$container" sha256sum /etc/dropbear/dropbear_ed25519_host_key)"
 echo 'PASS: non-root SSH, unauthorized/root login rejection, home/Codex state and host-key persistence'
 
