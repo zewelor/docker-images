@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["workarounds:nodeDockerVersioning", "github>zewelor/renovate-config//presets/k3s-stable", "github>zewelor/renovate-config//presets/github-actions"],
+  "extends": ["workarounds:nodeDockerVersioning", "github>zewelor/renovate-config//presets/k3s-stable"],
   "enabledManagers": [
     "github-actions",
     "dockerfile",
@@ -27,18 +27,14 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["github-actions", "dockerfile", "custom.regex"],
+      "matchManagers": [
+        "github-actions",
+        "dockerfile",
+        "custom.regex"
+      ],
+      "automerge": true,
       "automergeType": "branch",
       "platformAutomerge": false
-    },
-    {
-      "matchManagers": ["dockerfile", "custom.regex"],
-      "automerge": true
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "matchDepTypes": ["!action"],
-      "automerge": true
     },
     {
       "matchDatasources": ["custom.k3sStable"],
