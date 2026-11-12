@@ -47,8 +47,6 @@
       "matchFileNames": ["codex/Dockerfile"],
       "groupName": "codex image dependencies",
       "separateMajorMinor": false,
-      "separateMinorPatch": false,
-      "separateMultipleMajor": false,
       "schedule": ["* * 1,15 * *"]
     },
     {
