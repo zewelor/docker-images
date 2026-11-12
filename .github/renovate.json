@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["workarounds:nodeDockerVersioning"],
+  "extends": ["workarounds:nodeDockerVersioning", "github>zewelor/renovate-config//presets/k3s-stable"],
   "enabledManagers": [
     "github-actions",
     "dockerfile",
@@ -9,15 +9,6 @@
   "dependencyDashboard": true,
   "timezone": "Europe/Lisbon",
   "minimumReleaseAge": "7 days",
-  "customDatasources": {
-    "k3sStable": {
-      "defaultRegistryUrlTemplate": "https://update.k3s.io/v1-release/channels",
-      "format": "json",
-      "transformTemplates": [
-        "{\"releases\":[{\"version\": $$.(data[id = 'stable'].latest),\"sourceUrl\":\"https://github.com/k3s-io/k3s\",\"changelogUrl\":$join([\"https://github.com/k3s-io/k3s/releases/tag/\",data[id = 'stable'].latest])}],\"homepage\":\"https://k3s.io/\",\"sourceUrl\":\"https://github.com/k3s-io/k3s\"}"
-      ]
-    }
-  },
   "customManagers": [
     {
       "customType": "regex",
@@ -44,11 +35,6 @@
       "automerge": true,
       "automergeType": "branch",
       "platformAutomerge": false
-    },
-    {
-      "description": "The K3s stable datasource does not provide a release timestamp",
-      "matchDatasources": ["custom.k3sStable"],
-      "minimumReleaseAge": null
     },
     {
       "matchDatasources": ["custom.k3sStable"],
