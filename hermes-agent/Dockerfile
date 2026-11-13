@@ -3,10 +3,6 @@ ARG HERMES_AGENT_VERSION=v0.23.1
 # renovate: datasource=github-releases depName=jqlang/jq
 ARG JQ_VERSION=1.8.2
 
-# Artifact stage - pull multi-arch sourcetap binary from mutable latest package
-# hadolint ignore=DL3007
-FROM ghcr.io/zewelor/sourcetap:latest AS sourcetap
-
 # Build stage - download and verify kubectl and jq with explicit pipefail
 FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION} AS builder
 
@@ -14,6 +10,16 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG TARGETARCH
 ARG JQ_VERSION
+
+WORKDIR /tmp/hermes-deb
+
+# hadolint ignore=DL3008
+RUN install -d -o _apt -g root /tmp/hermes-deb \
+    && apt-get update \
+    && apt-get download dumb-init \
+    && mv dumb-init_*.deb dumb-init.deb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
     arch="${TARGETARCH:-amd64}"; \
@@ -41,6 +47,7 @@ RUN set -eux; \
 # Final stage - copy verified binaries into clean upstream base image
 FROM nousresearch/hermes-agent:${HERMES_AGENT_VERSION}
 
+RUN --mount=type=bind,from=builder,source=/tmp/hermes-deb/dumb-init.deb,target=/tmp/dumb-init.deb dpkg -i /tmp/dumb-init.deb
+
 COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
-COPY --from=sourcetap /usr/local/bin/sourcetap /usr/local/bin/sourcetap
