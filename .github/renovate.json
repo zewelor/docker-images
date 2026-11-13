@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["workarounds:nodeDockerVersioning", "github>zewelor/renovate-config//presets/k3s-stable"],
+  "extends": ["workarounds:nodeDockerVersioning", "github>zewelor/renovate-config//presets/k3s-stable", "github>zewelor/renovate-config//presets/annotations"],
   "enabledManagers": [
     "github-actions",
     "dockerfile",
@@ -16,13 +16,6 @@
       "matchStrings": ["ARG ALPINE_VERSION=(?<currentValue>[0-9]+\\.[0-9]+)"],
       "depNameTemplate": "alpine",
       "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?(?:\\s+extractVersion=(?<extractVersion>\\S+))?\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"
-      ]
     }
   ],
   "packageRules": [
