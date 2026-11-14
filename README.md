@@ -17,6 +17,14 @@ see the [Codex update policy](codex/README.md#automatic-updates).
 
 Because the repo prefers freshness over reproducibility, local builds and CI always pull the latest matching base image tags before building.
 
+## Ruby image workspace
+
+Both Ruby variants default to `/` and provide no `APP_DIR` or `/app` directory.
+Derived application Dockerfiles must declare their own `WORKDIR` and directory
+ownership. Development containers choose the mounted workspace through Compose
+or Dev Container configuration. The slim image retains the `app` user; the
+distroless image retains its `nonroot` user.
+
 ## CI behavior
 
 CI uses one thin workflow per image, plus one static full rebuild workflow.

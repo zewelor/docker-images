@@ -9,16 +9,13 @@ ARG DISTROLESS_DEBIAN_VERSION=13
 FROM ruby:${RUBY_VERSION} AS base
 
 ARG RUNTIME_PACKAGES="catatonit libjemalloc2"
-ENV APP_DIR=/app \
-    BUNDLE_VERSION=system \
+ENV BUNDLE_VERSION=system \
     DEBIAN_FRONTEND=noninteractive \
     LD_PRELOAD="libjemalloc.so.2"
 
 # Create app user
 RUN groupadd --gid 1000 app && \
-    useradd -l --uid 1000 -g app -s /bin/bash --create-home app && \
-    mkdir -p ${APP_DIR} && \
-    chown -R app:app ${APP_DIR}
+    useradd -l --uid 1000 -g app -s /bin/bash --create-home app
 
 # Install runtime packages and clean up
 # hadolint ignore=DL3008
@@ -28,7 +25,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR ${APP_DIR}
+WORKDIR /
 
 ENTRYPOINT ["/usr/bin/catatonit", "--"]
 
@@ -45,9 +42,8 @@ RUN apt-get update && \
 # SC2016: Single quotes intentional - we want literal $ for awk patterns
 # hadolint ignore=DL4006,SC2016
 RUN set -eux; \
-    mkdir -p /distroless-root/usr/local /distroless-root/usr/lib /distroless-root/usr/lib64 /distroless-root/app /distroless-root/usr/bin; \
+    mkdir -p /distroless-root/usr/local /distroless-root/usr/lib /distroless-root/usr/lib64 /distroless-root/usr/bin; \
     cp -a /usr/local/. /distroless-root/usr/local/; \
-    cp -a /app/. /distroless-root/app/; \
     cp -a /usr/bin/catatonit /distroless-root/usr/bin/catatonit; \
     # Keep runtime-only Ruby files in distroless image.
     rm -rf /distroless-root/usr/local/include \
@@ -71,25 +67,22 @@ RUN set -eux; \
     mkdir -p "$(dirname "$dest")"; \
     cp -v "$lib" "$dest"; \
     done; \
-    find /distroless-root/usr/local -type f \( -name ruby -o -name "*.so" -o -name "*.so.*" \) -exec strip --strip-debug {} +; \
-    chown -R 65532:65532 /distroless-root/app
+    find /distroless-root/usr/local -type f \( -name ruby -o -name "*.so" -o -name "*.so.*" \) -exec strip --strip-debug {} +
 
 FROM gcr.io/distroless/base-debian${DISTROLESS_DEBIAN_VERSION}:nonroot AS distroless
 
-ENV APP_DIR=/app \
-    BUNDLE_VERSION=system \
+ENV BUNDLE_VERSION=system \
     HOME=/home/nonroot \
     BUNDLE_USER_HOME=/tmp/bundler \
     BUNDLE_USER_CACHE=/tmp/bundler/cache \
     BUNDLE_USER_PLUGIN=/tmp/bundler/plugin \
     LD_PRELOAD="libjemalloc.so.2"
 
-WORKDIR ${APP_DIR}
+WORKDIR /
 
 COPY --from=distroless_builder /distroless-root/usr/local/ /usr/local/
 COPY --from=distroless_builder /distroless-root/usr/lib/ /usr/lib/
 COPY --from=distroless_builder /distroless-root/usr/lib64/ /usr/lib64/
-COPY --from=distroless_builder /distroless-root/app/ /app/
 COPY --from=distroless_builder /distroless-root/usr/bin/catatonit /usr/bin/catatonit
 
 USER 65532:65532
