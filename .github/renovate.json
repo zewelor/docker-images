@@ -30,12 +30,6 @@
       "platformAutomerge": false
     },
     {
-      "matchDatasources": ["custom.k3sStable"],
-      "matchPackageNames": ["k3s-io/k3s"],
-      "matchUpdateTypes": ["minor", "major"],
-      "automerge": false
-    },
-    {
       "description": "Batch all Codex image dependency updates on the 1st and 15th of each month",
       "matchFileNames": ["codex/Dockerfile"],
       "groupName": "codex image dependencies",
