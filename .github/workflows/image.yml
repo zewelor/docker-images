@@ -33,7 +33,13 @@ env:
 jobs:
   standard:
     name: Build ${{ matrix.image_name }}
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Bot-triggered Renovate PR checks already run on push for branch automerge.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       !(github.event.pull_request.user.login == 'renovate[bot]' &&
+         github.triggering_actor == 'renovate[bot]' &&
+         startsWith(github.head_ref, 'renovate/')))
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +63,13 @@ jobs:
 
   ruby:
     name: Build ruby
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Bot-triggered Renovate PR checks already run on push for branch automerge.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       !(github.event.pull_request.user.login == 'renovate[bot]' &&
+         github.triggering_actor == 'renovate[bot]' &&
+         startsWith(github.head_ref, 'renovate/')))
     uses: ./.github/workflows/reusable-ruby-image.yml
     with:
       publish: ${{ github.ref == 'refs/heads/main' }}

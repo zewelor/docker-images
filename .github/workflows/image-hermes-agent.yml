@@ -29,7 +29,13 @@ permissions:
 jobs:
   build:
     name: Build and publish
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    # Bot-triggered Renovate PR checks already run on push for branch automerge.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       !(github.event.pull_request.user.login == 'renovate[bot]' &&
+         github.triggering_actor == 'renovate[bot]' &&
+         startsWith(github.head_ref, 'renovate/')))
     uses: ./.github/workflows/reusable-build-image.yml
     with:
       image_name: hermes-agent

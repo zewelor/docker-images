@@ -36,6 +36,17 @@ CI uses one thin workflow per image, plus one static full rebuild workflow.
 
 Changes to a dedicated `image-<name>.yml` rebuild only its image. Shared workflow changes are handled by the full rebuild instead of triggering every dedicated workflow. A commit changing both shared and image-specific inputs can trigger both paths.
 
+Renovate branches run lint, build, and smoke checks on `push` so branch automerge
+can work before any PR is created. PR jobs are skipped only when the PR comes
+from this repository's `renovate/**` branches, was created by `renovate[bot]`, and
+the run was initiated by `renovate[bot]`. These automated PR runs do not separately
+test the merge result. Human-created PRs and human-triggered PR events still run,
+including updates and reopening of a bot's PR. Fork PR builds remain disabled.
+
+Manual verification remains available on any ref. Re-running an existing run
+retains its original commit; update the branch first when verification against
+the latest `main` is needed.
+
 Reusable workflows serialize publication per image across both paths. Active runs
 finish; the newest pending run replaces any older pending run. Different images
 can still build in parallel, and non-publishing runs use separate locks per ref.
