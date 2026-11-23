@@ -51,3 +51,4 @@ RUN --mount=type=bind,from=builder,source=/tmp/hermes-deb/dumb-init.deb,target=/
 
 COPY --from=builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --from=builder /usr/local/bin/jq /usr/local/bin/jq
+COPY pxopulse_ocr/ /opt/hermes/plugins/pxopulse_ocr/

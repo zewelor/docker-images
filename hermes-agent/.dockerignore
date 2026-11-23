@@ -1,3 +1,7 @@
 *
 !Dockerfile
 !.dockerignore
+!pxopulse_ocr/
+!pxopulse_ocr/*.py
+!pxopulse_ocr/plugin.yaml
+pxopulse_ocr/__pycache__/

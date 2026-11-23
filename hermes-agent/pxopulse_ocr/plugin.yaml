@@ -1,0 +1,5 @@
+name: pxopulse_ocr
+version: 0.1.0
+description: Send Discord posters to PxoPulse OCR and report their results in the original thread.
+provides_hooks:
+  - pre_gateway_dispatch
