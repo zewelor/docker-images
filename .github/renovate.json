@@ -6,7 +6,9 @@
     "dockerfile",
     "custom.regex"
   ],
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "timezone": "Europe/Lisbon",
   "minimumReleaseAge": "7 days",
   "customManagers": [
