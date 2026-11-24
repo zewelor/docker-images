@@ -32,11 +32,11 @@
       "platformAutomerge": false
     },
     {
-      "description": "Batch all Codex image dependency updates on the 1st and 15th of each month",
+      "description": "Batch all Codex image dependency updates on the 1st–2nd and 15th–16th of each month",
       "matchFileNames": ["codex/Dockerfile"],
       "groupName": "codex image dependencies",
       "separateMajorMinor": false,
-      "schedule": ["* * 1,15 * *"]
+      "schedule": ["* * 1-2,15-16 * *"]
     },
     {
       "matchPackageNames": [
